@@ -9,8 +9,8 @@
   "author": "Veman (The L3rNa3aN) Jadhav",
   "license": "ISC",
   "dependencies": {
-    "cannon": "^0.6.2",
-    "cannon-es-debugger": "^1.0.0",
+    "@dimforge/rapier3d": "^0.14.0",
+    "lil-gui": "^0.20.0",
     "serve": "^14.2.4",
     "three": "^0.172.0"
   },
