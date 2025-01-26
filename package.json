@@ -1,4 +1,5 @@
 {
+  "type": "module",
   "name": "vemanjadhav.com",
   "version": "1.0.0",
   "description": "ThreeJS portfolio website.",
@@ -15,6 +16,7 @@
     "three": "^0.172.0"
   },
   "devDependencies": {
-    "vite": "^6.0.6"
+    "vite": "^6.0.6",
+    "vite-plugin-wasm": "^3.4.1"
   }
 }
