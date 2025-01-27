@@ -8,13 +8,17 @@ export default class Player
         this.geometry = new THREE.BoxGeometry(1, 2, 1);
         this.material = new THREE.MeshLambertMaterial({ color: 0xff0000 });
         this.mesh = new THREE.Mesh(this.geometry, this.material);
+        this.previousTimestamp = 0;
+        
         this.mesh.castShadow = true;
         this.mesh.receiveShadow = true;
 
-        // const rbDesc = RAPIER.RigidBodyDesc.kinematicPositionBased();
         const rbDesc = RAPIER.RigidBodyDesc.dynamic();
         rbDesc.setCanSleep(false);
         this.rigidBody = physWorld.createRigidBody(rbDesc);
+
+        //Lock rotations for the rigidbody.
+        this.rigidBody.lockRotations(true, true);
 
         const colliderDesc = RAPIER.ColliderDesc.cuboid(0.5, 1, 0.5);
         physWorld.createCollider(colliderDesc, this.rigidBody);
@@ -41,15 +45,20 @@ export default class Player
         if(k === 's' || k === 'S') this.downClicked = state;
     } */
 
-    update()
+    update(timestamp)
     {
+        //Calculate delta time.
+        const deltaTime = (timestamp - this.previousTimestamp) / 1000;
+        this.previousTimestamp = timestamp;
+        
         // Updating the mesh's position and rotation to match the rigid body's.
         const position = this.rigidBody.translation();
         this.mesh.position.set(position.x, position.y, position.z);
         this.mesh.quaternion.copy(this.rigidBody.rotation());
 
         // this.rigidBody.addForce(new RAPIER.Vector3(0, 2.5 * this.testVar, 0));
-        this.rigidBody.applyImpulse(new RAPIER.Vector3(0, 2.5 * this.testVar, 0));
+        let testForce = 150 * this.testVar * deltaTime;
+        this.rigidBody.applyImpulse(new RAPIER.Vector3(0, testForce, 0));
     }
 }
 
