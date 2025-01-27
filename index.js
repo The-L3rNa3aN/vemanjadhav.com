@@ -2,11 +2,14 @@ import * as THREE from "three";
 import RAPIER from "@dimforge/rapier3d";
 import GUI from "lil-gui";
 import Player from "./Player";
+import RapierDebugRenderer from "./RapierDebugRenderer";
 
-/* -------------------------Basic Setup-------------------------- */
+//#region ------------------Basic Setup--------------------------
 const scene = new THREE.Scene();
 const renderer = new THREE.WebGLRenderer();
 const mainCam = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
 
 mainCam.position.set(10, 10, 10);
 mainCam.lookAt(0, 0, 0);
@@ -15,14 +18,7 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 let dirLight = new THREE.DirectionalLight(0xffffff, 1);
-let dirLightModifier = 200
 dirLight.position.set(0, 5, 5);
-/* dirLight.shadow.camera.near = 0.1;
-dirLight.shadow.camera.far = 1000;
-dirLight.shadow.camera.top = dirLightModifier;
-dirLight.shadow.camera.bottom = -dirLightModifier;
-dirLight.shadow.camera.left = -dirLightModifier;
-dirLight.shadow.camera.right = dirLightModifier; */
 dirLight.shadow.mapSize.width = 1024;
 dirLight.shadow.mapSize.height = 1024;
 dirLight.castShadow = true;
@@ -39,78 +35,72 @@ window.addEventListener("resize", () =>
     mainCam.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
+//#endregion
 
-/* ------------------------Rapier Debugger----------------------- */
-class RapierDebugRenderer
-{
-    mesh
-    world
-    enabled = true
-  
-    constructor(scene, world)
-    {
-      this.world = world
-      this.mesh = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0xffffff, vertexColors: true }))
-      this.mesh.frustumCulled = false
-      scene.add(this.mesh)
-    }
-  
-    update()
-    {
-      if (this.enabled)
-      {
-        const { vertices, colors } = this.world.debugRender()
-        this.mesh.geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3))
-        this.mesh.geometry.setAttribute('color', new THREE.BufferAttribute(colors, 4))
-        this.mesh.visible = true
-      }
-      else
-      {
-        this.mesh.visible = false
-      }
-    }
-}
-
-/* ---------------------Rapier Physics Setup--------------------- */
+//#region --------------Rapier Physics Setup---------------------
 const gravity = { x: 0, y: -9.81, z: 0 };
 const physWorld = new RAPIER.World(gravity);
 
-let platformCollider = RAPIER.ColliderDesc.cuboid(2.5, 0.5, 2.5);
+let platformCollider = RAPIER.ColliderDesc.cuboid(7.5, 0.5, 7.5);
 physWorld.createCollider(platformCollider);
 
-// let rbDesc = RAPIER.RigidBodyDesc.dynamic();
-/* let rbDesc = new RAPIER.RigidBodyDesc(RAPIER.RigidBodyType.Dynamic);
-rbDesc.mass = 5;
-rbDesc.setTranslation(0, 5, 0);
-let rb = physWorld.createRigidBody(rbDesc); */
-// console.log(rb, rbDesc);
-// rb.addForce({ x: 0, y: 25, z: 0 });
-
-/* let cubeCollider = RAPIER.ColliderDesc.cuboid(0.25, 0.25, 0.25);
-physWorld.createCollider(cubeCollider, rb);
-
-let cube = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), new THREE.MeshLambertMaterial({ color: 0xffffff }));
-cube.quaternion.copy(rb.rotation());
-cube.castShadow = true;
-cube.receiveShadow = true; */
-
-let platform = new THREE.Mesh(new THREE.BoxGeometry(5, 1, 5), new THREE.MeshLambertMaterial({ color: 0x00ff00 }));
+let platform = new THREE.Mesh(new THREE.BoxGeometry(15, 1, 15), new THREE.MeshLambertMaterial({ color: 0x00ff00 }));
 platform.castShadow = true;
 platform.receiveShadow = true;
 
-scene.add(/* cube, */ platform);
+scene.add(platform);
+//#endregion
 
+//#region --------------------Debug GUI--------------------------
 const rapierDebugRenderer = new RapierDebugRenderer(scene, physWorld);
+const gui = new GUI();
+gui.add(rapierDebugRenderer, 'enabled').name("Rapier Debug Renderer");
+//#endregion
 
 const player = new Player(physWorld, scene);
 // player.rigidBody.setTranslation(0, 5, 0);
 
-/* ---------------------------Debug GUI-------------------------- */
-const gui = new GUI();
-gui.add(rapierDebugRenderer, 'enabled').name("Rapier Debug Renderer");
+//#region ------------------Pointer Stuff------------------------
+function findIntersect(pos)
+{
+    raycaster.setFromCamera(pos, mainCam);
+    return raycaster.intersectObjects(scene.children);
+}
 
-/* --------------------------Update Loop------------------------- */
-function updateLoop()
+window.addEventListener('click', (e) =>
+{
+    pointer.x = (e.clientX / renderer.domElement.width) * 2 - 1;
+    pointer.y = -(e.clientY / renderer.domElement.height) * 2 + 1;
+
+    let intersects = findIntersect(pointer);
+
+    if (intersects.length > 0)
+    {
+        let intersect = intersects[0];
+        let point = intersect.point;
+        console.log(point);
+    }
+})
+//#endregion
+
+//#region -------------------Update Loop-------------------------
+function updateLoop(timestamp)
+{
+    requestAnimationFrame(updateLoop);
+
+    rapierDebugRenderer.update();
+
+    physWorld.step();
+
+    player.update(timestamp);
+    
+    mainCam.lookAt(player.mesh.position);
+
+    renderer.render(scene, mainCam);
+}
+//#endregion
+
+/* function updateLoop()
 {
     requestAnimationFrame(updateLoop);
 
@@ -123,6 +113,7 @@ function updateLoop()
     mainCam.lookAt(player.mesh.position);
 
     renderer.render(scene, mainCam);
-}
+} */
 
-updateLoop();
+// updateLoop();
+requestAnimationFrame(updateLoop);
