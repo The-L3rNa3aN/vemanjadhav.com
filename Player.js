@@ -27,23 +27,11 @@ export default class Player
 
         this.testVar = 0;
 
-        // document.addEventListener('keydown', (e)=>this.DetectKey(e,1));
-        // document.addEventListener('keyup', (e)=>this.DetectKey(e,0));
-
-        document.addEventListener('keydown', (e) => { if (e.key === 'w' || e === "W") this.testVar = 1 });
-        document.addEventListener('keyup', (e) => { if (e.key === 'w' || e === "W") this.testVar = 0 });
+        /* document.addEventListener('keydown', (e) => { if (e.key === 'w' || e === "W") this.testVar = 1 });
+        document.addEventListener('keyup', (e) => { if (e.key === 'w' || e === "W") this.testVar = 0 }); */
 
         console.log(this.rigidBody);
     }
-
-    /* DetectKey(keyPress,state)
-    {
-        let k = keyPress.key;
-        if(k === 'a' || k === 'A') this.leftClicked = state;
-        if(k === 'd' || k === 'D') this.rightClicked = state;
-        if(k === 'w' || k === 'W') this.upClicked = state;
-        if(k === 's' || k === 'S') this.downClicked = state;
-    } */
 
     update(timestamp)
     {
@@ -57,11 +45,12 @@ export default class Player
         this.mesh.quaternion.copy(this.rigidBody.rotation());
 
         // this.rigidBody.addForce(new RAPIER.Vector3(0, 2.5 * this.testVar, 0));
-        let testForce = 150 * this.testVar * deltaTime;
-        this.rigidBody.applyImpulse(new RAPIER.Vector3(0, testForce, 0));
+        /* let testForce = 150 * this.testVar * deltaTime;
+        this.rigidBody.applyImpulse(new RAPIER.Vector3(0, testForce, 0)); */
     }
 }
 
+//Just in case.
 /* export default class Player extends RAPIER.KinematicCharacterController
 {
     constructor()
