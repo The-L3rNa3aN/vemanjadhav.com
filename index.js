@@ -8,7 +8,6 @@ import { GLTFExporter } from "three/examples/jsm/exporters/GLTFExporter";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 
 /* TODO: -
- - Use "recast-navigation-js" for generating navmeshes on the fly.
  - Exclude AxesHelper from beign exported along with the rest of the scene.
 */
 
@@ -22,8 +21,9 @@ const pf = new Pathfinding();
 const pfHelper = new PathfindingHelper();
 const gltfExporter = new GLTFExporter();
 const gltfLoader = new GLTFLoader();
+var worldAxes = new THREE.AxesHelper(7);
 
-mainCam.position.set(10, 10, 10);
+mainCam.position.set(10, 20, 10);
 mainCam.lookAt(0, 0, 0);
 
 renderer.shadowMap.enabled = true;
@@ -33,9 +33,15 @@ let dirLight = new THREE.DirectionalLight(0xffffff, 1);
 dirLight.position.set(0, 5, 5);
 dirLight.shadow.mapSize.width = 1024;
 dirLight.shadow.mapSize.height = 1024;
+dirLight.shadow.camera.near = 0.5;
+dirLight.shadow.camera.far = 100;
+dirLight.shadow.camera.left = -10;
+dirLight.shadow.camera.right = 10;
+dirLight.shadow.camera.top = 10;
+dirLight.shadow.camera.bottom = -10;
 dirLight.castShadow = true;
 
-scene.add(new THREE.AxesHelper(7), dirLight);
+scene.add(/* worldAxes, */ dirLight, pfHelper);
 
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.render(scene, mainCam);
@@ -47,6 +53,8 @@ window.addEventListener("resize", () =>
     mainCam.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
+
+function toggleAxesHelper() { worldAxes.visible = !worldAxes.visible; }
 //#endregion
 
 //#region --------------Rapier Physics Setup---------------------
@@ -60,7 +68,12 @@ let platform = new THREE.Mesh(new THREE.BoxGeometry(15, 1, 15), new THREE.MeshLa
 platform.castShadow = true;
 platform.receiveShadow = true;
 
-scene.add(platform);
+let obstacle = new THREE.Mesh(new THREE.BoxGeometry(5, 5, 5), new THREE.MeshLambertMaterial({ color: 0xfcd303 }));
+obstacle.position.set(0, 3, 0);
+obstacle.castShadow = true;
+obstacle.receiveShadow = true;
+
+scene.add(platform, obstacle);
 //#endregion
 
 //#region -----------------Scene to GLTF-------------------------
@@ -85,6 +98,7 @@ function save(_blob, fileName)
 //#endregion
 
 //#region ----------------Navmesh Generation---------------------
+// https://navmesh.isaacmason.com/
 let navmesh; let groupID; let navpath;
 gltfLoader.load("./Assets/NavMeshes/navMesh_testScene.gltf", (gltf) =>
 {
@@ -104,33 +118,10 @@ const rapierDebugRenderer = new RapierDebugRenderer(scene, physWorld);
 const gui = new GUI();
 gui.add(rapierDebugRenderer, 'enabled').name("Rapier Debug Renderer");
 gui.add({ clickMe: download }, 'clickMe').name("Download scene as GLB");
-// gui.add({ clickMe: generateNavMesh }, 'clickMe').name("Generate navmesh");
+// gui.add({ clickMe: toggleAxesHelper }, 'clickMe').name("Toggle axes helper");
 //#endregion
 
-const player = new Player(physWorld, scene);
-// player.rigidBody.setTranslation(0, 5, 0);
-
-/* Must make something to generate navmeshes from a scene without having to make use of third party software.
-This just fucking sucks. */
-/* function generateNavMesh() {
-    const geometries = [];
-    scene.traverse((child) => {
-        if (child.isMesh) {
-            child.updateMatrixWorld();
-            const tempGeometry = child.geometry.clone();
-            tempGeometry.applyMatrix4(child.matrixWorld);
-            geometries.push(tempGeometry);
-        }
-    });
-
-    const mergedGeometry = mergeGeometries(geometries);
-    const zone = Pathfinding.createZone(mergedGeometry);
-    pf.setZoneData('level', zone);
-    console.log('NavMesh generated:', zone);
-    // save(new Blob([JSON.stringify(zone)], { type: "application/octet-stream" }), "navmesh.glb");
-    const navMesh = new THREE.Mesh(mergedGeometry, new THREE.MeshBasicMaterial({ color: 0x7d7d7d }));
-    gltfExporter.parse(navMesh, (gltf) => { saveArrayBuffer(gltf, "navmesh.glb"); }, (error) => { console.log("Encountered an error."); }, { binary: true });
-} */
+const player = new Player(physWorld, scene, { x: -7, y: 1.5, z: 7 });
 
 //#region ------------------Pointer Stuff------------------------
 function findIntersect(pos)
@@ -150,10 +141,11 @@ window.addEventListener('click', (e) =>
     {
         let point = intersects[0].point;
         let playerPos = player.rigidBody.translation();
-        groupID = pf.getGroup(playerPos);
-        let closest = pf.getClosestNode(playerPos, groupID);
-        navpath = pf.findPath(closest.centroid, point, groupID);
+        groupID = pf.getGroup(ZONE, playerPos);
+        let closest = pf.getClosestNode(playerPos, ZONE, groupID);
+        navpath = pf.findPath(closest.centroid, point, ZONE, groupID);
 
+        // Visualize the path.
         if(navpath)
         {
             pfHelper.reset();
@@ -161,7 +153,8 @@ window.addEventListener('click', (e) =>
             pfHelper.setTargetPosition(point);
             pfHelper.setPath(navpath);
         }
-        console.log(point);
+        
+        player._navpath = navpath;
     }
 })
 //#endregion
@@ -177,26 +170,10 @@ function updateLoop(timestamp)
 
     player.update(timestamp);
     
-    mainCam.lookAt(player.mesh.position);
+    // mainCam.lookAt(player.mesh.position);
 
     renderer.render(scene, mainCam);
 }
 //#endregion
 
-/* function updateLoop()
-{
-    requestAnimationFrame(updateLoop);
-
-    rapierDebugRenderer.update();
-
-    physWorld.step();
-
-    player.update();
-    
-    mainCam.lookAt(player.mesh.position);
-
-    renderer.render(scene, mainCam);
-} */
-
-// updateLoop();
 requestAnimationFrame(updateLoop);
