@@ -3,17 +3,20 @@ import RAPIER from "@dimforge/rapier3d";
 
 export default class Player
 {
-    constructor(physWorld, scene)
+    constructor(physWorld, scene, { x = 0, y = 0, z = 0 } = {})
     {
         this.geometry = new THREE.BoxGeometry(1, 2, 1);
         this.material = new THREE.MeshLambertMaterial({ color: 0xff0000 });
         this.mesh = new THREE.Mesh(this.geometry, this.material);
         this.previousTimestamp = 0;
+        this.movementVector = new RAPIER.Vector3(0, 0, 0);
+        this._navpath = undefined;
+        this.speed = 5;
         
         this.mesh.castShadow = true;
         this.mesh.receiveShadow = true;
 
-        const rbDesc = RAPIER.RigidBodyDesc.dynamic();
+        const rbDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(x, y, z);
         rbDesc.setCanSleep(false);
         this.rigidBody = physWorld.createRigidBody(rbDesc);
 
@@ -24,13 +27,22 @@ export default class Player
         physWorld.createCollider(colliderDesc, this.rigidBody);
 
         scene.add(this.mesh);
+    }
 
-        this.testVar = 0;
+    movePlayer(_delta)
+    {
+        if(!this._navpath || this._navpath.length <= 0) return;
 
-        /* document.addEventListener('keydown', (e) => { if (e.key === 'w' || e === "W") this.testVar = 1 });
-        document.addEventListener('keyup', (e) => { if (e.key === 'w' || e === "W") this.testVar = 0 }); */
+        let targetPosition = this._navpath[0];
+        const distance = targetPosition.clone().sub(this.rigidBody.translation());
 
-        console.log(this.rigidBody);
+        if(distance.lengthSq() > 0.05 * 0.05)
+        {
+            distance.normalize();
+            this.rigidBody.setLinvel(new RAPIER.Vector3(distance.x * this.speed, distance.y * this.speed, distance.z * this.speed));
+        }
+        else
+            this._navpath.shift();
     }
 
     update(timestamp)
@@ -44,9 +56,7 @@ export default class Player
         this.mesh.position.set(position.x, position.y, position.z);
         this.mesh.quaternion.copy(this.rigidBody.rotation());
 
-        // this.rigidBody.addForce(new RAPIER.Vector3(0, 2.5 * this.testVar, 0));
-        /* let testForce = 150 * this.testVar * deltaTime;
-        this.rigidBody.applyImpulse(new RAPIER.Vector3(0, testForce, 0)); */
+        this.movePlayer(timestamp);
     }
 }
 
