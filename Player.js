@@ -11,7 +11,10 @@ export default class Player
         this.previousTimestamp = 0;
         this.movementVector = new RAPIER.Vector3(0, 0, 0);
         this._navpath = undefined;
-        this.speed = 5;
+        this.speed = 50;
+        this.nodeSpeed = 7.5;
+        this.closestDistToNode = 0.85;
+        // this.closestDistToNode = 2;
         
         this.mesh.castShadow = true;
         this.mesh.receiveShadow = true;
@@ -36,14 +39,55 @@ export default class Player
         let targetPosition = this._navpath[0];
         const distance = targetPosition.clone().sub(this.rigidBody.translation());
 
-        if(distance.lengthSq() > 0.05 * 0.05)
+        this.rigidBody.resetForces();
+
+        if(distance.lengthSq() > this.closestDistToNode)
         {
-            distance.normalize();
-            this.rigidBody.setLinvel(new RAPIER.Vector3(distance.x * this.speed, distance.y * this.speed, distance.z * this.speed));
+            let nDist = distance.clone().normalize();
+            this.rigidBody.addForce(new RAPIER.Vector3(nDist.x * this.speed, nDist.y * this.speed, nDist.z * this.speed));
         }
         else
+        {
+            let _nextTargetPosition = this._navpath[1];
+            let _nextDistance = _nextTargetPosition.clone().sub(this.rigidBody.translation());
+            let _nDist = _nextDistance.clone().normalize();
+            this.rigidBody.setLinvel(new RAPIER.Vector3(_nDist.x * this.nodeSpeed, _nDist.y * this.nodeSpeed, _nDist.z * this.nodeSpeed));
             this._navpath.shift();
+        }
     }
+
+    // Just in case.
+    /* movePlayer(_delta)
+    {
+        if(!this._navpath || this._navpath.length <= 0) return;
+
+        let targetPosition = this._navpath[0];
+        const distance = targetPosition.clone().sub(this.rigidBody.translation());
+
+        if(distance.lengthSq() > this.closestDistToNode)
+        {
+            // distance.normalize();
+            // this.rigidBody.setLinvel(new RAPIER.Vector3(distance.x * this.speed, distance.y * this.speed, distance.z * this.speed));
+
+            let nDist = distance.clone().normalize();
+            if(!this.isForceApplied)
+            {
+                this.isForceApplied = true;
+                this.rigidBody.addForce(new RAPIER.Vector3(nDist.x * this.speed, nDist.y * this.speed, nDist.z * this.speed));
+                console.log("Applying force.");
+
+            }
+            // console.log(this.rigidBody.linvel());
+        }
+        else
+        {
+            this._navpath.shift();
+            this.rigidBody.setLinvel(new RAPIER.Vector3(0, 0, 0));
+            this.rigidBody.resetForces();
+            this.isForceApplied = false;
+            console.log("Reached node.");
+        }
+    } */
 
     update(timestamp)
     {
