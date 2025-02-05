@@ -9,7 +9,8 @@ export default class Player
         this.material = new THREE.MeshLambertMaterial({ color: 0xff0000 });
         this.mesh = new THREE.Mesh(this.geometry, this.material);
         this.previousTimestamp = 0;
-        this.movementVector = new RAPIER.Vector3(0, 0, 0);
+        this.velocity = new RAPIER.Vector3(0, 0, 0);
+        this.maxVelocity = 50;
         this._navpath = undefined;
         this.speed = 50;
         this.nodeSpeed = 7.5;
@@ -44,14 +45,27 @@ export default class Player
         if(distance.lengthSq() > this.closestDistToNode)
         {
             let nDist = distance.clone().normalize();
-            this.rigidBody.addForce(new RAPIER.Vector3(nDist.x * this.speed, nDist.y * this.speed, nDist.z * this.speed));
+            // this.rigidBody.addForce(new RAPIER.Vector3(nDist.x * this.speed, nDist.y * this.speed, nDist.z * this.speed));
+            let v = nDist.clone().multiplyScalar(this.speed);
+            this.velocity = v;
+            this.velocity.clampLength(0, 25);
+
+            if(this._navpath.length > 1) this.rigidBody.addForce(this.velocity);
+            else this.rigidBody.setLinvel(new RAPIER.Vector3(distance.x, distance.y, distance.z));
         }
         else
         {
-            let _nextTargetPosition = this._navpath[1];
-            let _nextDistance = _nextTargetPosition.clone().sub(this.rigidBody.translation());
-            let _nDist = _nextDistance.clone().normalize();
-            this.rigidBody.setLinvel(new RAPIER.Vector3(_nDist.x * this.nodeSpeed, _nDist.y * this.nodeSpeed, _nDist.z * this.nodeSpeed));
+            if(this._navpath.length <= 1) return;
+            
+            // Comment this code for the "drunk effect".
+            if(this._navpath.length > 1)
+            {
+                let _nextTargetPosition = this._navpath[1];
+                let _nextDistance = _nextTargetPosition.clone().sub(this.rigidBody.translation());
+                let _nDist = _nextDistance.clone().normalize();
+                this.rigidBody.setLinvel(new RAPIER.Vector3(_nDist.x * this.nodeSpeed, _nDist.y * this.nodeSpeed, _nDist.z * this.nodeSpeed));
+            }
+
             this._navpath.shift();
         }
     }
