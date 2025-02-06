@@ -50,8 +50,35 @@ export default class Player
             this.velocity = v;
             this.velocity.clampLength(0, 25);
 
-            if(this._navpath.length > 1) this.rigidBody.addForce(this.velocity);
-            else this.rigidBody.setLinvel(new RAPIER.Vector3(distance.x, distance.y, distance.z));
+            // this.rigidBody.addForce(this.velocity);
+
+            // Solution #1: use "setLinvel" for stopping the player before the last node.
+            /* if(this._navpath.length > 1) this.rigidBody.addForce(this.velocity);
+            else this.rigidBody.setLinvel(new RAPIER.Vector3(distance.x, distance.y, distance.z)); */
+
+            // Solution #2: reset all forces applied on the player and make them stop near the last node.
+            /* if(this._navpath.length === 1 && distance.lengthSq() <= 1)
+            {
+                this.rigidBody.setLinvel(new RAPIER.Vector3(0, 0, 0));
+                this.rigidBody.resetForces();
+                let finalDestination = this._navpath[0];
+                this.rigidBody.translation().x = finalDestination.x;
+                this.rigidBody.translation().y = finalDestination.y;
+                this.rigidBody.translation().z = finalDestination.z;
+                this._navpath.shift();
+            } */
+
+            // Solution #3: apply an opposing force on the player when they near the last node.
+            if(this._navpath.length === 1)
+            {
+                let _friction = nDist.clone().negate();
+                _friction.multiplyScalar(this.speed);
+                // console.log(this.velocity);
+                this.velocity.cross(_friction);     //I THINK THIS FINALLY WORKS?! BUILD ON THIS IMMEDIATELY!
+                // Note: the player does not move if there is only one node in navpath because of this solution.
+            }
+
+            this.rigidBody.addForce(this.velocity);
         }
         else
         {
@@ -69,39 +96,6 @@ export default class Player
             this._navpath.shift();
         }
     }
-
-    // Just in case.
-    /* movePlayer(_delta)
-    {
-        if(!this._navpath || this._navpath.length <= 0) return;
-
-        let targetPosition = this._navpath[0];
-        const distance = targetPosition.clone().sub(this.rigidBody.translation());
-
-        if(distance.lengthSq() > this.closestDistToNode)
-        {
-            // distance.normalize();
-            // this.rigidBody.setLinvel(new RAPIER.Vector3(distance.x * this.speed, distance.y * this.speed, distance.z * this.speed));
-
-            let nDist = distance.clone().normalize();
-            if(!this.isForceApplied)
-            {
-                this.isForceApplied = true;
-                this.rigidBody.addForce(new RAPIER.Vector3(nDist.x * this.speed, nDist.y * this.speed, nDist.z * this.speed));
-                console.log("Applying force.");
-
-            }
-            // console.log(this.rigidBody.linvel());
-        }
-        else
-        {
-            this._navpath.shift();
-            this.rigidBody.setLinvel(new RAPIER.Vector3(0, 0, 0));
-            this.rigidBody.resetForces();
-            this.isForceApplied = false;
-            console.log("Reached node.");
-        }
-    } */
 
     update(timestamp)
     {
