@@ -113,15 +113,17 @@ gltfLoader.load("./Assets/NavMeshes/navMesh_testScene.gltf", (gltf) =>
 });
 //#endregion
 
+const player = new Player(physWorld, scene, { x: -7, y: 1.5, z: 7 });
+
 //#region --------------------Debug GUI--------------------------
 const rapierDebugRenderer = new RapierDebugRenderer(scene, physWorld);
+const sliderParams = { speed: 50 };
 const gui = new GUI();
 gui.add(rapierDebugRenderer, 'enabled').name("Rapier Debug Renderer");
 gui.add({ clickMe: download }, 'clickMe').name("Download scene as GLB");
 // gui.add({ clickMe: toggleAxesHelper }, 'clickMe').name("Toggle axes helper");
+gui.add(sliderParams, 'speed', 0, 50).name("Player speed").onChange((value) => { player.speed = value; });
 //#endregion
-
-const player = new Player(physWorld, scene, { x: -7, y: 1.5, z: 7 });
 
 //#region ------------------Pointer Stuff------------------------
 function findIntersect(pos)
