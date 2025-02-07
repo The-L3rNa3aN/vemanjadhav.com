@@ -1,6 +1,8 @@
 import * as THREE from "three";
 import RAPIER from "@dimforge/rapier3d";
 
+const PLAYER_SPEED = 50;
+
 export default class Player
 {
     constructor(physWorld, scene, { x = 0, y = 0, z = 0 } = {})
@@ -16,6 +18,9 @@ export default class Player
         this.nodeSpeed = 7.5;
         this.closestDistToNode = 0.85;
         // this.closestDistToNode = 2;
+        this.finalPathStarted = false;
+        this.finalFrictionCoeff = undefined;
+        this.finalFrictionForce = undefined;
         
         this.mesh.castShadow = true;
         this.mesh.receiveShadow = true;
@@ -50,7 +55,7 @@ export default class Player
             this.velocity = v;
             this.velocity.clampLength(0, 25);
 
-            // this.rigidBody.addForce(this.velocity);
+            this.rigidBody.addForce(this.velocity);
 
             // Solution #1: use "setLinvel" for stopping the player before the last node.
             /* if(this._navpath.length > 1) this.rigidBody.addForce(this.velocity);
@@ -69,16 +74,49 @@ export default class Player
             } */
 
             // Solution #3: apply an opposing force on the player when they near the last node.
-            if(this._navpath.length === 1)
+            /* if(this._navpath.length === 1)
             {
                 let _friction = nDist.clone().negate();
                 _friction.multiplyScalar(this.speed);
                 // console.log(this.velocity);
                 this.velocity.cross(_friction);     //I THINK THIS FINALLY WORKS?! BUILD ON THIS IMMEDIATELY!
-                // Note: the player does not move if there is only one node in navpath because of this solution.
             }
 
-            this.rigidBody.addForce(this.velocity);
+            this.rigidBody.addForce(this.velocity); */
+
+            /* if(this._navpath.length === 1)
+            {
+                if(!this.finalPathStarted)
+                {
+                    this.finalPathStarted = true;
+
+                    // Friction coeff = (v ^ 2) / (2 * d * g)
+                    this.finalFrictionCoeff = (this.velocity.length() ^ 2) / (2 * distance.length() * -9.81);
+
+                    // this.finalFrictionForce = this.velocity.clone().normalize().multiplyScalar(this.finalFrictionCoeff);
+                    // console.log(this.velocity.lengthSq());
+                }
+
+                this.finalFrictionForce = this.velocity.clone().normalize().multiplyScalar(this.finalFrictionCoeff);
+
+                // this.rigidBody.addForce(this.finalFrictionForce);
+                this.velocity.cross(this.finalFrictionForce);
+            }
+
+            this.rigidBody.addForce(this.velocity); */
+
+            //Solution #4: reduce speed along with the distance left on the final path.
+            if(this._navpath.length === 1)
+            {
+                this.speed = distance.length() / this.speed;
+
+                if(!this.rigidBody.isMoving())
+                {
+                    console.log("Player has stopped.");     //This sorts of works. The player most of the time moves a little ahead of the final point.
+                    this.speed = PLAYER_SPEED;
+                }
+                // console.log(this.rigidBody.isMoving());
+            }
         }
         else
         {
