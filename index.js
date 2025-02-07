@@ -3,6 +3,7 @@ import RAPIER from "@dimforge/rapier3d";
 import GUI from "lil-gui";
 import Player from "./Player";
 import RapierDebugRenderer from "./RapierDebugRenderer";
+import Stats from "stats.js";
 import { Pathfinding, PathfindingHelper } from "three-pathfinding";
 import { GLTFExporter } from "three/examples/jsm/exporters/GLTFExporter";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
@@ -22,6 +23,8 @@ const pfHelper = new PathfindingHelper();
 const gltfExporter = new GLTFExporter();
 const gltfLoader = new GLTFLoader();
 var worldAxes = new THREE.AxesHelper(7);
+const stats = new Stats();
+var fpsCap = 60;
 
 mainCam.position.set(10, 20, 10);
 mainCam.lookAt(0, 0, 0);
@@ -55,6 +58,9 @@ window.addEventListener("resize", () =>
 });
 
 function toggleAxesHelper() { worldAxes.visible = !worldAxes.visible; }
+
+stats.showPanel(0);
+document.body.appendChild(stats.dom);
 //#endregion
 
 //#region --------------Rapier Physics Setup---------------------
@@ -73,7 +79,7 @@ obstacle.position.set(0, 3, 0);
 obstacle.castShadow = true;
 obstacle.receiveShadow = true;
 
-scene.add(platform, obstacle);
+scene.add(platform/* , obstacle */);
 //#endregion
 
 //#region -----------------Scene to GLTF-------------------------
@@ -99,7 +105,7 @@ function save(_blob, fileName)
 
 //#region ----------------Navmesh Generation---------------------
 // https://navmesh.isaacmason.com/
-let navmesh; let groupID; let navpath;
+let navmesh; let groupID; let navpath; let ZONE = "testScene";
 gltfLoader.load("./Assets/NavMeshes/navMesh_testScene.gltf", (gltf) =>
 {
     gltf.scene.traverse((node) =>
@@ -107,7 +113,7 @@ gltfLoader.load("./Assets/NavMeshes/navMesh_testScene.gltf", (gltf) =>
         if(!navmesh && node.isObject3D && node.children && node.children.length > 0)
         {
             navmesh = node.children[0];
-            pf.setZoneData(Pathfinding.createZone(navmesh.geometry));
+            pf.setZoneData(ZONE, Pathfinding.createZone(navmesh.geometry));
         }
     });
 });
@@ -117,12 +123,15 @@ const player = new Player(physWorld, scene, { x: -7, y: 1.5, z: 7 });
 
 //#region --------------------Debug GUI--------------------------
 const rapierDebugRenderer = new RapierDebugRenderer(scene, physWorld);
-const sliderParams = { speed: 50 };
+const playerSpeedSliderParams = { speed: 50 };
+const fpsSliderParams = { fps: 60 };
+
 const gui = new GUI();
 gui.add(rapierDebugRenderer, 'enabled').name("Rapier Debug Renderer");
-gui.add({ clickMe: download }, 'clickMe').name("Download scene as GLB");
 // gui.add({ clickMe: toggleAxesHelper }, 'clickMe').name("Toggle axes helper");
-gui.add(sliderParams, 'speed', 0, 50).name("Player speed").onChange((value) => { player.speed = value; });
+gui.add(playerSpeedSliderParams, 'speed', 0, 50).name("Player speed").onChange((value) => { player.speed = value; });
+gui.add(fpsSliderParams, 'fps', 25, 160).name("FPS Cap").onChange((value) => { fpsCap = value; });
+gui.add({ clickMe: download }, 'clickMe').name("Download scene as GLB");
 //#endregion
 
 //#region ------------------Pointer Stuff------------------------
@@ -156,7 +165,8 @@ window.addEventListener('click', (e) =>
             pfHelper.setPath(navpath);
         }
         
-        player._navpath = navpath;
+        // player._navpath = navpath;
+        player.navpath = navpath;
     }
 })
 //#endregion
@@ -164,17 +174,24 @@ window.addEventListener('click', (e) =>
 //#region -------------------Update Loop-------------------------
 function updateLoop(timestamp)
 {
-    requestAnimationFrame(updateLoop);
+    // requestAnimationFrame(updateLoop);
 
+    // For manipulating the fixed timestep for debugging purposes.
+    setTimeout(() => requestAnimationFrame(updateLoop), 1000 / fpsCap );
+
+    stats.begin();
+    
     rapierDebugRenderer.update();
-
+    
     physWorld.step();
-
+    
     player.update(timestamp);
     
     // mainCam.lookAt(player.mesh.position);
-
+    
     renderer.render(scene, mainCam);
+
+    stats.end();
 }
 //#endregion
 

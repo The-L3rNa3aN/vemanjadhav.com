@@ -12,7 +12,6 @@ export default class Player
         this.mesh = new THREE.Mesh(this.geometry, this.material);
         this.previousTimestamp = 0;
         this.velocity = new RAPIER.Vector3(0, 0, 0);
-        this.maxVelocity = 50;
         this._navpath = undefined;
         this.speed = 50;
         this.nodeSpeed = 7.5;
@@ -38,12 +37,22 @@ export default class Player
         scene.add(this.mesh);
     }
 
+    set navpath(_navpath)
+    {
+        this._navpath = _navpath;
+        this.speed = PLAYER_SPEED;
+        this.velocity = new RAPIER.Vector3(0, 0, 0);
+        this.rigidBody.resetForces();
+        this.rigidBody.setLinvel(new RAPIER.Vector3(0, 0, 0));
+    }
+
     movePlayer(_delta)
     {
         if(!this._navpath || this._navpath.length <= 0) return;
 
         let targetPosition = this._navpath[0];
         const distance = targetPosition.clone().sub(this.rigidBody.translation());
+        let isNavpathSingleNode = this._navpath.length === 1 ? true : false;
 
         this.rigidBody.resetForces();
 
@@ -108,12 +117,22 @@ export default class Player
             //Solution #4: reduce speed along with the distance left on the final path.
             if(this._navpath.length === 1)
             {
+                // For handling navpaths with only a single node.
+                if(isNavpathSingleNode)
+                {
+                    //
+                }
+
                 this.speed = distance.length() / this.speed;
 
                 if(!this.rigidBody.isMoving())
                 {
-                    console.log("Player has stopped.");     //This sorts of works. The player most of the time moves a little ahead of the final point.
+                    // console.log("Player has stopped.");     //This sorts of works. The player most of the time moves a little ahead of the final point.
                     this.speed = PLAYER_SPEED;
+                    this.rigidBody.setLinvel(new RAPIER.Vector3(0, 0, 0));
+                    this.rigidBody.resetForces();
+                    // this.velocity = new RAPIER.Vector3(0, 0, 0);
+                    this._navpath.shift();
                 }
                 // console.log(this.rigidBody.isMoving());
             }
