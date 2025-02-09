@@ -9,7 +9,7 @@ import { GLTFExporter } from "three/examples/jsm/exporters/GLTFExporter";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 
 /* TODO: -
- - Exclude AxesHelper from beign exported along with the rest of the scene.
+ - Exclude AxesHelper from being exported along with the rest of the scene.
 */
 
 //#region ------------------Basic Setup--------------------------
@@ -25,6 +25,7 @@ const gltfLoader = new GLTFLoader();
 var worldAxes = new THREE.AxesHelper(7);
 const stats = new Stats();
 var fpsCap = 60;
+const clock = new THREE.Clock();
 
 mainCam.position.set(10, 20, 10);
 mainCam.lookAt(0, 0, 0);
@@ -123,13 +124,13 @@ const player = new Player(physWorld, scene, { x: -7, y: 1.5, z: 7 });
 
 //#region --------------------Debug GUI--------------------------
 const rapierDebugRenderer = new RapierDebugRenderer(scene, physWorld);
-const playerSpeedSliderParams = { speed: 50 };
-const fpsSliderParams = { fps: 60 };
+const playerSpeedSliderParams = { speed: player.speed };
+const fpsSliderParams = { fps: fpsCap };
 
 const gui = new GUI();
 gui.add(rapierDebugRenderer, 'enabled').name("Rapier Debug Renderer");
 // gui.add({ clickMe: toggleAxesHelper }, 'clickMe').name("Toggle axes helper");
-gui.add(playerSpeedSliderParams, 'speed', 0, 50).name("Player speed").onChange((value) => { player.speed = value; });
+gui.add(playerSpeedSliderParams, 'speed', 0, 1000).name("Player speed").onChange((value) => { player.speed = value; });
 gui.add(fpsSliderParams, 'fps', 25, 160).name("FPS Cap").onChange((value) => { fpsCap = value; });
 gui.add({ clickMe: download }, 'clickMe').name("Download scene as GLB");
 //#endregion
@@ -178,6 +179,7 @@ function updateLoop(timestamp)
 
     // For manipulating the fixed timestep for debugging purposes.
     setTimeout(() => requestAnimationFrame(updateLoop), 1000 / fpsCap );
+    const delta = clock.getDelta();
 
     stats.begin();
     
@@ -185,7 +187,7 @@ function updateLoop(timestamp)
     
     physWorld.step();
     
-    player.update(timestamp);
+    player.update(delta);
     
     // mainCam.lookAt(player.mesh.position);
     
