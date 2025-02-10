@@ -8,10 +8,6 @@ import { Pathfinding, PathfindingHelper } from "three-pathfinding";
 import { GLTFExporter } from "three/examples/jsm/exporters/GLTFExporter";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 
-/* TODO: -
- - Exclude AxesHelper from being exported along with the rest of the scene.
-*/
-
 //#region ------------------Basic Setup--------------------------
 const scene = new THREE.Scene();
 const renderer = new THREE.WebGLRenderer();
@@ -28,6 +24,7 @@ var fpsCap = 60;
 const clock = new THREE.Clock();
 
 mainCam.position.set(10, 20, 10);
+// mainCam.position.set(0, 20, 0);
 mainCam.lookAt(0, 0, 0);
 
 renderer.shadowMap.enabled = true;
@@ -57,8 +54,6 @@ window.addEventListener("resize", () =>
     mainCam.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
-
-function toggleAxesHelper() { worldAxes.visible = !worldAxes.visible; }
 
 stats.showPanel(0);
 document.body.appendChild(stats.dom);
@@ -124,13 +119,13 @@ const player = new Player(physWorld, scene, { x: -7, y: 1.5, z: 7 });
 
 //#region --------------------Debug GUI--------------------------
 const rapierDebugRenderer = new RapierDebugRenderer(scene, physWorld);
-const playerSpeedSliderParams = { speed: player.speed };
 const fpsSliderParams = { fps: fpsCap };
 
 const gui = new GUI();
 gui.add(rapierDebugRenderer, 'enabled').name("Rapier Debug Renderer");
-// gui.add({ clickMe: toggleAxesHelper }, 'clickMe').name("Toggle axes helper");
-gui.add(playerSpeedSliderParams, 'speed', 0, 1000).name("Player speed").onChange((value) => { player.speed = value; });
+gui.add(worldAxes, 'visible').name("Axes Helper");
+gui.add(player, 'speed', 0, 1000).name("Player speed").onChange((value) => { player.speed = value; });
+gui.add(player, 'nodeSpeed', 0, 150).name("Player node speed").onChange((value) => { player.nodeSpeed = value; });
 gui.add(fpsSliderParams, 'fps', 25, 160).name("FPS Cap").onChange((value) => { fpsCap = value; });
 gui.add({ clickMe: download }, 'clickMe').name("Download scene as GLB");
 //#endregion
