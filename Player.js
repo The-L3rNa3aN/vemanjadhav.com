@@ -12,13 +12,11 @@ export default class Player
         this._navpath = undefined;
         // this.speed = 50;
         this.speed = 500;
-        this.nodeSpeed = 7.5;
+        // this.nodeSpeed = 7.5;
+        this.nodeSpeed = 75;
         this.closestDistToNode = 0.85;
         // this.closestDistToNode = 2;
-        this.finalPathStarted = false;
-        this.finalFrictionCoeff = undefined;
-        this.finalFrictionForce = undefined;
-        this.isNavpathSingleNode = false;
+        this.hasStartedLooking = false;
         
         this.mesh.castShadow = true;
         this.mesh.receiveShadow = true;
@@ -33,6 +31,7 @@ export default class Player
         const colliderDesc = RAPIER.ColliderDesc.cuboid(0.5, 1, 0.5);
         physWorld.createCollider(colliderDesc, this.rigidBody);
 
+        this.mesh.add(new THREE.AxesHelper(2));
         scene.add(this.mesh);
 
         // console.log(this.rigidBody);
@@ -42,7 +41,6 @@ export default class Player
     set navpath(_navpath)
     {
         this._navpath = _navpath;
-        // this.speed = 50;
         this.rigidBody.resetForces();
         this.rigidBody.setLinvel(new RAPIER.Vector3(0, 0, 0));
     }
@@ -66,6 +64,21 @@ export default class Player
 
             // this.rigidBody.addForce(this.velocity);
             this.rigidBody.setLinvel(this.velocity.multiplyScalar(_delta));
+
+            // Rotating the player based on its direction vector.
+            /* let forwardVector = new THREE.Vector3(0, 0, this.mesh.position.z + 1);
+            forwardVector.normalize();
+            let angle = forwardVector.angleTo(nDist);
+            // console.log("ANGLE: ", angle, "Y ROTATION: ", this.mesh.rotation.y);
+            console.log(angle - this.mesh.rotation.y);
+            this.mesh.rotation.y = THREE.MathUtils.lerp(this.mesh.rotation.y, angle, 10 * _delta); */
+
+            // Create a new vector a little far away from the target position and make the player look at it.
+
+            /* if(!this.hasStartedLooking)
+            {
+                this.hasStartedLooking = true;
+            } */
         }
         else
         {
@@ -89,8 +102,10 @@ export default class Player
         // Updating the mesh's position and rotation to match the rigid body's.
         const position = this.rigidBody.translation();
         this.mesh.position.set(position.x, position.y, position.z);
-        this.mesh.quaternion.copy(this.rigidBody.rotation());
+        // this.mesh.quaternion.copy(this.rigidBody.rotation());
+        this.rigidBody.setRotation(this.mesh.quaternion);
 
+        // this.rigidBody.setRotation(new THREE.Quaternion(0, this.t, 0));
         this.movePlayer(delta);
     }
 }
