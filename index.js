@@ -22,6 +22,11 @@ var worldAxes = new THREE.AxesHelper(7);
 const stats = new Stats();
 var fpsCap = 60;
 const clock = new THREE.Clock();
+var sightingObject = new THREE.Object3D();
+
+sightingObject.add(new THREE.AxesHelper(2));
+// sightingObject.position.set(0, 1.5, 0);
+// sightingObject.rotation.set(90, 0, 0)
 
 mainCam.position.set(10, 20, 10);
 // mainCam.position.set(0, 20, 0);
@@ -115,7 +120,8 @@ gltfLoader.load("./Assets/NavMeshes/navMesh_testScene.gltf", (gltf) =>
 });
 //#endregion
 
-const player = new Player(physWorld, scene, { x: -7, y: 1.5, z: 7 });
+const player = new Player(physWorld, scene, { x: -7, y: 1.5, z: 7 }, sightingObject);
+sightingObject.lookAt(player.mesh.position);
 
 //#region --------------------Debug GUI--------------------------
 const rapierDebugRenderer = new RapierDebugRenderer(scene, physWorld);
@@ -167,13 +173,20 @@ window.addEventListener('click', (e) =>
 })
 //#endregion
 
+window.addEventListener("changePlayerRotation", function()
+{
+    let p = new THREE.Vector3(player._navpath[0].x + 10, player.mesh.position.y, player._navpath[0].z + 10)
+    sightingObject.position.set(p);
+    sightingObject.lookAt(player.mesh.position);
+});
+
 //#region -------------------Update Loop-------------------------
 function updateLoop(timestamp)
 {
-    // requestAnimationFrame(updateLoop);
+    requestAnimationFrame(updateLoop);
 
     // For manipulating the fixed timestep for debugging purposes.
-    setTimeout(() => requestAnimationFrame(updateLoop), 1000 / fpsCap );
+    // setTimeout(() => requestAnimationFrame(updateLoop), 1000 / fpsCap );
     const delta = clock.getDelta();
 
     stats.begin();
@@ -183,6 +196,8 @@ function updateLoop(timestamp)
     physWorld.step();
     
     player.update(delta);
+
+    // player.mesh.quaternion.rotateTowards(mainCam.quaternion, delta);
     
     // mainCam.lookAt(player.mesh.position);
     
