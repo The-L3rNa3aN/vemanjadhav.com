@@ -3,7 +3,7 @@ import RAPIER from "@dimforge/rapier3d";
 
 export default class Player
 {
-    constructor(physWorld, scene, { x = 0, y = 0, z = 0 } = {})
+    constructor(physWorld, scene, { x = 0, y = 0, z = 0 } = {}, sightingObject)
     {
         this.geometry = new THREE.BoxGeometry(1, 2, 1);
         this.material = new THREE.MeshLambertMaterial({ color: 0xff0000 });
@@ -17,6 +17,7 @@ export default class Player
         this.closestDistToNode = 0.85;
         // this.closestDistToNode = 2;
         this.hasStartedLooking = false;
+        this._sightingObject = sightingObject;
         
         this.mesh.castShadow = true;
         this.mesh.receiveShadow = true;
@@ -66,19 +67,7 @@ export default class Player
             this.rigidBody.setLinvel(this.velocity.multiplyScalar(_delta));
 
             // Rotating the player based on its direction vector.
-            /* let forwardVector = new THREE.Vector3(0, 0, this.mesh.position.z + 1);
-            forwardVector.normalize();
-            let angle = forwardVector.angleTo(nDist);
-            // console.log("ANGLE: ", angle, "Y ROTATION: ", this.mesh.rotation.y);
-            console.log(angle - this.mesh.rotation.y);
-            this.mesh.rotation.y = THREE.MathUtils.lerp(this.mesh.rotation.y, angle, 10 * _delta); */
-
-            // Create a new vector a little far away from the target position and make the player look at it.
-
-            /* if(!this.hasStartedLooking)
-            {
-                this.hasStartedLooking = true;
-            } */
+            // this.mesh.lookAt(targetPosition.x, this.mesh.position.y, targetPosition.z);         //This works but its too choppy.
         }
         else
         {
@@ -94,6 +83,9 @@ export default class Player
             } */
 
             this._navpath.shift();
+
+            let e = new Event("changePlayerRotation");
+            window.dispatchEvent(e);
         }
     }
 
@@ -104,6 +96,8 @@ export default class Player
         this.mesh.position.set(position.x, position.y, position.z);
         // this.mesh.quaternion.copy(this.rigidBody.rotation());
         this.rigidBody.setRotation(this.mesh.quaternion);
+
+        this.mesh.quaternion.rotateTowards(this._sightingObject.quaternion, delta);
 
         // this.rigidBody.setRotation(new THREE.Quaternion(0, this.t, 0));
         this.movePlayer(delta);
