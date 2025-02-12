@@ -22,11 +22,6 @@ var worldAxes = new THREE.AxesHelper(7);
 const stats = new Stats();
 var fpsCap = 60;
 const clock = new THREE.Clock();
-var sightingObject = new THREE.Object3D();
-
-sightingObject.add(new THREE.AxesHelper(2));
-// sightingObject.position.set(0, 1.5, 0);
-// sightingObject.rotation.set(90, 0, 0)
 
 mainCam.position.set(10, 20, 10);
 // mainCam.position.set(0, 20, 0);
@@ -47,7 +42,7 @@ dirLight.shadow.camera.top = 10;
 dirLight.shadow.camera.bottom = -10;
 dirLight.castShadow = true;
 
-scene.add(/* worldAxes, */ dirLight, pfHelper);
+scene.add(worldAxes, dirLight, pfHelper);
 
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.render(scene, mainCam);
@@ -120,8 +115,7 @@ gltfLoader.load("./Assets/NavMeshes/navMesh_testScene.gltf", (gltf) =>
 });
 //#endregion
 
-const player = new Player(physWorld, scene, { x: -7, y: 1.5, z: 7 }, sightingObject);
-sightingObject.lookAt(player.mesh.position);
+const player = new Player(physWorld, scene, { x: -7, y: 1.5, z: 7 });
 
 //#region --------------------Debug GUI--------------------------
 const rapierDebugRenderer = new RapierDebugRenderer(scene, physWorld);
@@ -132,6 +126,7 @@ gui.add(rapierDebugRenderer, 'enabled').name("Rapier Debug Renderer");
 gui.add(worldAxes, 'visible').name("Axes Helper");
 gui.add(player, 'speed', 0, 1000).name("Player speed").onChange((value) => { player.speed = value; });
 gui.add(player, 'nodeSpeed', 0, 150).name("Player node speed").onChange((value) => { player.nodeSpeed = value; });
+gui.add(player, 'svLerpSpeed', 1, 10).name("Player rotating speed").onChange((value) => { player.svLerpSpeed = value; });
 gui.add(fpsSliderParams, 'fps', 25, 160).name("FPS Cap").onChange((value) => { fpsCap = value; });
 gui.add({ clickMe: download }, 'clickMe').name("Download scene as GLB");
 //#endregion
@@ -172,13 +167,6 @@ window.addEventListener('click', (e) =>
     }
 })
 //#endregion
-
-window.addEventListener("changePlayerRotation", function()
-{
-    let p = new THREE.Vector3(player._navpath[0].x + 10, player.mesh.position.y, player._navpath[0].z + 10)
-    sightingObject.position.set(p);
-    sightingObject.lookAt(player.mesh.position);
-});
 
 //#region -------------------Update Loop-------------------------
 function updateLoop(timestamp)
