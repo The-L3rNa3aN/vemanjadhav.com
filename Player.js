@@ -19,11 +19,6 @@ export default class Player
         this.sightingVector = new THREE.Object3D();
         this.sightingVector.add(new THREE.AxesHelper(2));
         this.svLerpSpeed = 5;
-        this.pathTravelStarted = false;
-        this.bezier_StartPoint;
-        this.bezier_MidPoint;
-        this.bezier_travelPath;
-        this.bezierTotalDist;
         
         this.mesh.castShadow = true;
         this.mesh.receiveShadow = true;
@@ -40,9 +35,6 @@ export default class Player
 
         this.mesh.add(new THREE.AxesHelper(2));
         scene.add(this.mesh, this.sightingVector);
-
-        // console.log(this.rigidBody);
-        // console.log(rbDesc);
     }
 
     set navpath(_navpath)
@@ -59,15 +51,8 @@ export default class Player
         let targetPosition = this._navpath[0];
         const distance = targetPosition.clone().sub(this.rigidBody.translation());
 
+        // This can be improved. Lots.
         this.sightingVector.position.lerp(targetPosition, this.svLerpSpeed * _delta);                        //For the player's eyes.
-
-        if(!this.pathTravelStarted)
-        {
-            this.bezierTotalDist = distance;
-            this.pathTravelStarted = !this.pathTravelStarted;
-        }
-
-        console.log(this.deCasteljau(5, this.bezierTotalDist, _delta));         //For having the sightingVector to move in a "Bezier" manner.
 
         this.rigidBody.resetForces();
 
@@ -112,12 +97,6 @@ export default class Player
         this.rigidBody.setRotation(this.mesh.quaternion);
 
         this.movePlayer(delta);
-    }
-
-    deCasteljau(peak, diff, t)
-    {
-        // Try implementing code here based on the de Casteljau algorithm and simulate the feeling of a Bezier.
-        let p = 1;
     }
 }
 
