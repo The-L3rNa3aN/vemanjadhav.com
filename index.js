@@ -7,6 +7,7 @@ import Stats from "stats.js";
 import { Pathfinding, PathfindingHelper } from "three-pathfinding";
 import { GLTFExporter } from "three/examples/jsm/exporters/GLTFExporter";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 
 //#region ------------------Basic Setup--------------------------
 const scene = new THREE.Scene();
@@ -22,6 +23,8 @@ var worldAxes = new THREE.AxesHelper(7);
 const stats = new Stats();
 var fpsCap = 60;
 const clock = new THREE.Clock();
+var isPfDebuggerEnabled = true;
+const controls = new OrbitControls(mainCam, renderer.domElement);
 
 mainCam.position.set(10, 20, 10);
 // mainCam.position.set(0, 20, 0);
@@ -57,11 +60,23 @@ window.addEventListener("resize", () =>
 
 stats.showPanel(0);
 document.body.appendChild(stats.dom);
+
+//Removing the pfHelper at runtime because it interferes with clicking.
+function togglePFDebugger(b)
+{
+    if(b)
+        scene.add(pfHelper);
+    else
+        scene.remove(pfHelper);
+
+    isPfDebuggerEnabled = b;
+}
 //#endregion
 
 //#region --------------Rapier Physics Setup---------------------
 const gravity = { x: 0, y: -9.81, z: 0 };
 const physWorld = new RAPIER.World(gravity);
+const yellow = new THREE.MeshLambertMaterial({ color: 0xfcd303 });
 
 let platformCollider = RAPIER.ColliderDesc.cuboid(7.5, 0.5, 7.5);
 physWorld.createCollider(platformCollider);
@@ -70,12 +85,61 @@ let platform = new THREE.Mesh(new THREE.BoxGeometry(15, 1, 15), new THREE.MeshLa
 platform.castShadow = true;
 platform.receiveShadow = true;
 
-let obstacle = new THREE.Mesh(new THREE.BoxGeometry(5, 5, 5), new THREE.MeshLambertMaterial({ color: 0xfcd303 }));
+let ramp_1 = new THREE.Mesh(new THREE.BoxGeometry(5, 1, 2.5), yellow);
+ramp_1.castShadow = true;
+ramp_1.receiveShadow = true;
+ramp_1.position.set(-2.5, 1.75, 6.25);
+ramp_1.rotateZ(0.7 * (180 / Math.PI));
+let ramp_1_c = RAPIER.ColliderDesc.cuboid(2.5, 0.5, 1.25);
+ramp_1_c.translation = ramp_1.position;
+ramp_1_c.rotation = ramp_1.quaternion;
+physWorld.createCollider(ramp_1_c);
+
+let walkway_1 = new THREE.Mesh(new THREE.BoxGeometry(3.5, 1, 7.5), yellow);
+walkway_1.castShadow = true;
+walkway_1.receiveShadow = true;
+walkway_1.position.set(-5.765, 3.293, 3.75);
+let walkway_1_c = RAPIER.ColliderDesc.cuboid(1.75, 0.5, 3.75);
+walkway_1_c.translation = walkway_1.position;
+walkway_1_c.rotation = walkway_1.quaternion;
+physWorld.createCollider(walkway_1_c);
+
+/* let bridge = new THREE.Mesh(new THREE.BoxGeometry(15, 1, 3.5), yellow);
+bridge.castShadow = true;
+bridge.receiveShadow = true;
+bridge.position.set(0, 3.293, 0);
+let bridge_c = RAPIER.ColliderDesc.cuboid(7.5, 0.5, 1.75);
+bridge_c.translation = bridge.position;
+bridge_c.rotation = bridge.quaternion;
+physWorld.createCollider(bridge_c);
+
+let ramp_2 = new THREE.Mesh(new THREE.BoxGeometry(5, 1, 2.5), yellow);
+ramp_2.castShadow = true;
+ramp_2.receiveShadow = true;
+ramp_2.position.set(2.5, 1.75, -6.25);
+ramp_2.rotateZ(-0.7 * (180 / Math.PI));
+let ramp_2_c = RAPIER.ColliderDesc.cuboid(2.5, 0.5, 1.25);
+ramp_2_c.translation = ramp_2.position;
+ramp_2_c.rotation = ramp_2.quaternion;
+physWorld.createCollider(ramp_2_c);
+
+let walkway_2 = new THREE.Mesh(new THREE.BoxGeometry(3.5, 1, 7.5), yellow);
+walkway_2.castShadow = true;
+walkway_2.receiveShadow = true;
+walkway_2.position.set(5.765, 3.293, -3.75);
+let walkway_2_c = RAPIER.ColliderDesc.cuboid(1.75, 0.5, 3.75);
+walkway_2_c.translation = walkway_2.position;
+walkway_2_c.rotation = walkway_2.quaternion;
+physWorld.createCollider(walkway_2_c); */
+
+/* let obstacle = new THREE.Mesh(new THREE.BoxGeometry(5, 5, 5), new THREE.MeshLambertMaterial({ color: 0xfcd303 }));
 obstacle.position.set(0, 3, 0);
 obstacle.castShadow = true;
 obstacle.receiveShadow = true;
 
-scene.add(platform/* , obstacle */);
+scene.add(platform, obstacle); */
+
+scene.add(platform, ramp_1, walkway_1/* , bridge, ramp_2, walkway_2 */)
 //#endregion
 
 //#region -----------------Scene to GLTF-------------------------
@@ -102,7 +166,7 @@ function save(_blob, fileName)
 //#region ----------------Navmesh Generation---------------------
 // https://navmesh.isaacmason.com/
 let navmesh; let groupID; let navpath; let ZONE = "testScene";
-gltfLoader.load("./Assets/NavMeshes/navMesh_testScene.gltf", (gltf) =>
+gltfLoader.load("./Assets/NavMeshes/navMesh_testScene_3.gltf", (gltf) =>
 {
     gltf.scene.traverse((node) =>
     {
@@ -115,15 +179,18 @@ gltfLoader.load("./Assets/NavMeshes/navMesh_testScene.gltf", (gltf) =>
 });
 //#endregion
 
-const player = new Player(physWorld, scene, { x: -7, y: 1.5, z: 7 });
+const player = new Player(physWorld, scene, { x: 6, y: 1.5, z: 6 });
 
 //#region --------------------Debug GUI--------------------------
 const rapierDebugRenderer = new RapierDebugRenderer(scene, physWorld);
 const fpsSliderParams = { fps: fpsCap };
+const pfToggleDebug = { test: true };
 
 const gui = new GUI();
 gui.add(rapierDebugRenderer, 'enabled').name("Rapier Debug Renderer");
 gui.add(worldAxes, 'visible').name("Axes Helper");
+gui.add(pfToggleDebug, 'test').name("Visualize Navpath").onChange((value) => togglePFDebugger(value));
+gui.add(controls, 'enabled').name("Enable Orbit Controls");
 gui.add(player, 'speed', 0, 1000).name("Player speed").onChange((value) => { player.speed = value; });
 gui.add(player, 'nodeSpeed', 0, 150).name("Player node speed").onChange((value) => { player.nodeSpeed = value; });
 gui.add(player, 'svLerpSpeed', 1, 10).name("Player rotating speed").onChange((value) => { player.svLerpSpeed = value; });
