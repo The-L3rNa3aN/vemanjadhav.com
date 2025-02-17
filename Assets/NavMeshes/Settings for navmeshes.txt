@@ -1,8 +1,13 @@
 All the navmeshes were generated with Issac Mason's online navmesh generator.
 This note exists merely for reference.
 
-navMesh_testScene_1
+NOTES: -
+ - Never use tiles for the navmeshes. Pathfinding will work badly if used.
+
+navMesh_testScene_1_1
 	//I didn't log the values because I'm an idiot.
+
+navMesh_testScene_1_2
 
 navMesh_testScene_2
 	Cell Size					: 0.2
@@ -23,26 +28,7 @@ navMesh_testScene_2
 	Expected Layers Per Tile	: 4
 	Max Layers					: 32
 
-navMesh_testScene_3 (tiled)
-	Cell Size					: 0.2
-	Cell Height					: 0.2
-	Tile Size					: 3
-	Border Size					: 0
-	Walkable Slope Angle		: 60
-	Walkable Height				: 15
-	Walkable Climb				: 2
-	Walkable Radius				: 2.5
-	Max Edge Length				: 12
-	Max Simplification Error	: 1.3
-	Min Region Area				: 0
-	Merge Region Area			: 7
-	Max Verts Per Poly			: 6
-	Detail Simple Dist			: 3.7
-	Detail Sample Max Error		: 0
-	Expected Layers Per Tile	: 1
-	Max Layers					: 32
-
-navMesh_testScene_3 (normal)
+navMesh_testScene_3_1
 	Cell Size					: 0.2
 	Cell Height					: 0.2
 	Tile Size					: 0
@@ -59,4 +45,45 @@ navMesh_testScene_3 (normal)
 	Detail Simple Dist			: 3.7
 	Detail Sample Max Error		: 0
 	Expected Layers Per Tile	: 1
+	Max Layers					: 32
+
+navMesh_testScene_3_2
+	Cell Size					: 0.05
+	Cell Height					: 0.05
+	Tile Size					: 0
+	Border Size					: 0
+	Walkable Slope Angle		: 60
+	Walkable Height				: 60
+	Walkable Climb				: 2
+	Walkable Radius				: 2.5
+	Max Edge Length				: 1
+	Max Simplification Error	: 1.3
+	Min Region Area				: 8
+	Merge Region Area			: 20
+	Max Verts Per Poly			: 6
+	Detail Simple Dist			: 6
+	Detail Sample Max Error		: 1
+	Expected Layers Per Tile	: 4
+	Max Layers					: 32
+
+navMesh_testScene_3_3
+// I forgot to log again. I'm such an idiot. All I know is that it is less intensive than the previous one.
+
+navMesh_testScene_3_4
+	Cell Size					: 0.01
+	Cell Height					: 0.05
+	Tile Size					: 0
+	Border Size					: 0
+	Walkable Slope Angle		: 60
+	Walkable Height				: 60
+	Walkable Climb				: 2
+	Walkable Radius				: 2.5
+	Max Edge Length				: 32
+	Max Simplification Error	: 1.3
+	Min Region Area				: 8
+	Merge Region Area			: 0
+	Max Verts Per Poly			: 3
+	Detail Simple Dist			: 3
+	Detail Sample Max Error		: 1
+	Expected Layers Per Tile	: 4
 	Max Layers					: 32
