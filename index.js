@@ -163,6 +163,25 @@ function save(_blob, fileName)
 }
 //#endregion
 
+//#region -----------------Model to Scene------------------------
+/* This needs to be a function that can be referenced in a game manager entity.
+I think importing it initially as a Group might be more beneficial for accessing spawn points. */
+/* gltfLoader.load("./Assets/NavMeshes/navMesh_testScene_3_4.gltf", (gltf) =>
+{
+    console.log(gltf);
+
+    // Method 1, directly importing the imported model's "scene" to the project's scene.
+    // The model "scene" here is a Group.
+    // var map = gltf.scene;
+    // scene.add(map);
+    
+    // Method 2, creating a Mesh from ThreeJS and separately adding the model's geometry and material.
+    let mapMesh = gltf.scene.children[0];
+    let map = new THREE.Mesh(mapMesh.geometry, mapMesh.material);
+    scene.add(map);
+}); */
+//#endregion
+
 //#region ----------------Navmesh Generation---------------------
 // https://navmesh.isaacmason.com/
 let navmesh; let groupID; let navpath; let ZONE = "testScene";
