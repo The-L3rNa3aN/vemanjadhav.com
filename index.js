@@ -104,7 +104,7 @@ walkway_1_c.translation = walkway_1.position;
 walkway_1_c.rotation = walkway_1.quaternion;
 physWorld.createCollider(walkway_1_c);
 
-/* let bridge = new THREE.Mesh(new THREE.BoxGeometry(15, 1, 3.5), yellow);
+let bridge = new THREE.Mesh(new THREE.BoxGeometry(15, 1, 3.5), yellow);
 bridge.castShadow = true;
 bridge.receiveShadow = true;
 bridge.position.set(0, 3.293, 0);
@@ -130,7 +130,7 @@ walkway_2.position.set(5.765, 3.293, -3.75);
 let walkway_2_c = RAPIER.ColliderDesc.cuboid(1.75, 0.5, 3.75);
 walkway_2_c.translation = walkway_2.position;
 walkway_2_c.rotation = walkway_2.quaternion;
-physWorld.createCollider(walkway_2_c); */
+physWorld.createCollider(walkway_2_c);
 
 /* let obstacle = new THREE.Mesh(new THREE.BoxGeometry(5, 5, 5), new THREE.MeshLambertMaterial({ color: 0xfcd303 }));
 obstacle.position.set(0, 3, 0);
@@ -139,7 +139,7 @@ obstacle.receiveShadow = true;
 
 scene.add(platform, obstacle); */
 
-scene.add(platform, ramp_1, walkway_1/* , bridge, ramp_2, walkway_2 */)
+scene.add(platform, ramp_1, walkway_1, bridge, ramp_2, walkway_2);
 //#endregion
 
 //#region -----------------Scene to GLTF-------------------------

@@ -17,7 +17,7 @@ export default class Player
         // this.closestDistToNode = 2;
         // this.sightingVector = new THREE.Vector3(0, 0, 0);
         this.sightingVector = new THREE.Object3D();
-        this.sightingVector.add(new THREE.AxesHelper(2));
+        // this.sightingVector.add(new THREE.AxesHelper(2));
         this.svLerpSpeed = 5;
         
         this.mesh.castShadow = true;
