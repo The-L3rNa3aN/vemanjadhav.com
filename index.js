@@ -8,10 +8,11 @@ import { Pathfinding, PathfindingHelper } from "three-pathfinding";
 import { GLTFExporter } from "three/examples/jsm/exporters/GLTFExporter";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
+import * as BufferGeometryUtils from "three/examples/jsm/utils/BufferGeometryUtils";
 
 //#region ------------------Basic Setup--------------------------
 const scene = new THREE.Scene();
-const renderer = new THREE.WebGLRenderer();
+const renderer = new THREE.WebGLRenderer({ antialias: true });
 const mainCam = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
@@ -32,6 +33,9 @@ mainCam.lookAt(0, 0, 0);
 
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMappingExposure = 2.3;
+renderer.gammaFactor = 0;
+renderer.outputEncoding = THREE.sRGBEncoding;
 
 let dirLight = new THREE.DirectionalLight(0xffffff, 1);
 dirLight.position.set(0, 5, 5);
@@ -80,66 +84,6 @@ const yellow = new THREE.MeshLambertMaterial({ color: 0xfcd303 });
 
 let platformCollider = RAPIER.ColliderDesc.cuboid(7.5, 0.5, 7.5);
 physWorld.createCollider(platformCollider);
-
-let platform = new THREE.Mesh(new THREE.BoxGeometry(15, 1, 15), new THREE.MeshLambertMaterial({ color: 0x00ff00 }));
-platform.castShadow = true;
-platform.receiveShadow = true;
-
-let ramp_1 = new THREE.Mesh(new THREE.BoxGeometry(5, 1, 2.5), yellow);
-ramp_1.castShadow = true;
-ramp_1.receiveShadow = true;
-ramp_1.position.set(-2.5, 1.75, 6.25);
-ramp_1.rotateZ(0.7 * (180 / Math.PI));
-let ramp_1_c = RAPIER.ColliderDesc.cuboid(2.5, 0.5, 1.25);
-ramp_1_c.translation = ramp_1.position;
-ramp_1_c.rotation = ramp_1.quaternion;
-physWorld.createCollider(ramp_1_c);
-
-let walkway_1 = new THREE.Mesh(new THREE.BoxGeometry(3.5, 1, 7.5), yellow);
-walkway_1.castShadow = true;
-walkway_1.receiveShadow = true;
-walkway_1.position.set(-5.765, 3.293, 3.75);
-let walkway_1_c = RAPIER.ColliderDesc.cuboid(1.75, 0.5, 3.75);
-walkway_1_c.translation = walkway_1.position;
-walkway_1_c.rotation = walkway_1.quaternion;
-physWorld.createCollider(walkway_1_c);
-
-let bridge = new THREE.Mesh(new THREE.BoxGeometry(15, 1, 3.5), yellow);
-bridge.castShadow = true;
-bridge.receiveShadow = true;
-bridge.position.set(0, 3.293, 0);
-let bridge_c = RAPIER.ColliderDesc.cuboid(7.5, 0.5, 1.75);
-bridge_c.translation = bridge.position;
-bridge_c.rotation = bridge.quaternion;
-physWorld.createCollider(bridge_c);
-
-let ramp_2 = new THREE.Mesh(new THREE.BoxGeometry(5, 1, 2.5), yellow);
-ramp_2.castShadow = true;
-ramp_2.receiveShadow = true;
-ramp_2.position.set(2.5, 1.75, -6.25);
-ramp_2.rotateZ(-0.7 * (180 / Math.PI));
-let ramp_2_c = RAPIER.ColliderDesc.cuboid(2.5, 0.5, 1.25);
-ramp_2_c.translation = ramp_2.position;
-ramp_2_c.rotation = ramp_2.quaternion;
-physWorld.createCollider(ramp_2_c);
-
-let walkway_2 = new THREE.Mesh(new THREE.BoxGeometry(3.5, 1, 7.5), yellow);
-walkway_2.castShadow = true;
-walkway_2.receiveShadow = true;
-walkway_2.position.set(5.765, 3.293, -3.75);
-let walkway_2_c = RAPIER.ColliderDesc.cuboid(1.75, 0.5, 3.75);
-walkway_2_c.translation = walkway_2.position;
-walkway_2_c.rotation = walkway_2.quaternion;
-physWorld.createCollider(walkway_2_c);
-
-/* let obstacle = new THREE.Mesh(new THREE.BoxGeometry(5, 5, 5), new THREE.MeshLambertMaterial({ color: 0xfcd303 }));
-obstacle.position.set(0, 3, 0);
-obstacle.castShadow = true;
-obstacle.receiveShadow = true;
-
-scene.add(platform, obstacle); */
-
-scene.add(platform, ramp_1, walkway_1, bridge, ramp_2, walkway_2);
 //#endregion
 
 //#region -----------------Scene to GLTF-------------------------
@@ -164,22 +108,41 @@ function save(_blob, fileName)
 //#endregion
 
 //#region -----------------Model to Scene------------------------
+// https://threejs.org/editor/ <- very useful
 /* This needs to be a function that can be referenced in a game manager entity.
 I think importing it initially as a Group might be more beneficial for accessing spawn points. */
-/* gltfLoader.load("./Assets/NavMeshes/navMesh_testScene_3_4.gltf", (gltf) =>
+function createMesh(meshes)
 {
-    console.log(gltf);
+    //Definitely my code. https://discourse.threejs.org/t/importing-glb-file-every-material-is-single-mesh/16227/2
+    var materials = [],
+    geometries = [],
+    mergedGeometry = new THREE.BufferGeometry(),
+    meshMaterial,
+    mergedMesh;
 
-    // Method 1, directly importing the imported model's "scene" to the project's scene.
-    // The model "scene" here is a Group.
-    // var map = gltf.scene;
-    // scene.add(map);
-    
-    // Method 2, creating a Mesh from ThreeJS and separately adding the model's geometry and material.
-    let mapMesh = gltf.scene.children[0];
-    let map = new THREE.Mesh(mapMesh.geometry, mapMesh.material);
-    scene.add(map);
-}); */
+    meshes.forEach(function(mesh)
+    {
+        mesh.updateMatrix();
+        geometries.push(mesh.geometry);
+        meshMaterial = new THREE.MeshStandardMaterial(mesh.material);
+        materials.push(meshMaterial);
+    });
+
+    mergedGeometry = BufferGeometryUtils.mergeGeometries(geometries, true);
+    mergedGeometry.groupsNeedUpdate = true;
+
+    mergedMesh = new THREE.Mesh(mergedGeometry, materials);
+    mergedMesh.castShadow = true;
+    mergedMesh.receiveShadow = true;
+
+    return mergedMesh;
+}
+
+gltfLoader.load("./Assets/Maps/testMap_1_2.glb", (gltf) =>
+{
+    let _mesh = createMesh(gltf.scene.children[0].children);
+    scene.add(_mesh);
+});
 //#endregion
 
 //#region ----------------Navmesh Generation---------------------
@@ -270,10 +233,6 @@ function updateLoop(timestamp)
     physWorld.step();
     
     player.update(delta);
-
-    // player.mesh.quaternion.rotateTowards(mainCam.quaternion, delta);
-    
-    // mainCam.lookAt(player.mesh.position);
     
     renderer.render(scene, mainCam);
 
