@@ -138,7 +138,7 @@ function createMesh(meshes)
     return mergedMesh;
 }
 
-gltfLoader.load("./Assets/Maps/testMap_1_2.glb", (gltf) =>
+gltfLoader.load("./Assets/Maps/testMap_1.glb", (gltf) =>
 {
     let _mesh = createMesh(gltf.scene.children[0].children);
     scene.add(_mesh);
