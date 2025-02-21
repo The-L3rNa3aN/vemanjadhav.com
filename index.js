@@ -82,8 +82,8 @@ const gravity = { x: 0, y: -9.81, z: 0 };
 const physWorld = new RAPIER.World(gravity);
 const yellow = new THREE.MeshLambertMaterial({ color: 0xfcd303 });
 
-let platformCollider = RAPIER.ColliderDesc.cuboid(7.5, 0.5, 7.5);
-physWorld.createCollider(platformCollider);
+// let platformCollider = RAPIER.ColliderDesc.cuboid(7.5, 0.5, 7.5);
+// physWorld.createCollider(platformCollider);
 //#endregion
 
 //#region -----------------Scene to GLTF-------------------------
@@ -141,6 +141,10 @@ function createMesh(meshes)
 gltfLoader.load("./Assets/Maps/testMap_1.glb", (gltf) =>
 {
     let _mesh = createMesh(gltf.scene.children[0].children);
+    let vertices = _mesh.geometry.attributes.position.array;
+    let indices = _mesh.geometry.index.array;
+    let meshCollider = RAPIER.ColliderDesc.trimesh(vertices, indices);
+    physWorld.createCollider(meshCollider);
     scene.add(_mesh);
 });
 //#endregion
