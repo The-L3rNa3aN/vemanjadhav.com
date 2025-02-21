@@ -5,7 +5,8 @@ export default class Player
 {
     constructor(physWorld, scene, { x = 0, y = 0, z = 0 } = {})
     {
-        this.geometry = new THREE.BoxGeometry(1, 2, 1);
+        // this.geometry = new THREE.BoxGeometry(1, 2, 1);
+        this.geometry = new THREE.CapsuleGeometry(0.5, 1, 4, 8);
         this.material = new THREE.MeshLambertMaterial({ color: 0xff0000 });
         this.mesh = new THREE.Mesh(this.geometry, this.material);
         this.velocity = new RAPIER.Vector3(0, 0, 0);
@@ -13,8 +14,8 @@ export default class Player
         this.speed = 500;
         // this.nodeSpeed = 7.5;
         this.nodeSpeed = 75;
-        this.closestDistToNode = 0.85;
-        // this.closestDistToNode = 2;
+        // this.closestDistToNode = 0.85;
+        this.closestDistToNode = 1.2;
         // this.sightingVector = new THREE.Vector3(0, 0, 0);
         this.sightingVector = new THREE.Object3D();
         // this.sightingVector.add(new THREE.AxesHelper(2));
@@ -30,7 +31,8 @@ export default class Player
         //Lock rotations for the rigidbody.
         this.rigidBody.lockRotations(true, true);
 
-        const colliderDesc = RAPIER.ColliderDesc.cuboid(0.5, 1, 0.5);
+        // const colliderDesc = RAPIER.ColliderDesc.cuboid(0.5, 1, 0.5);
+        const colliderDesc = RAPIER.ColliderDesc.capsule(0.5, 0.5);
         physWorld.createCollider(colliderDesc, this.rigidBody);
 
         this.mesh.add(new THREE.AxesHelper(2));
