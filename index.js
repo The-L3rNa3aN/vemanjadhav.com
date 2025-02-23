@@ -49,7 +49,7 @@ dirLight.shadow.camera.top = 10;
 dirLight.shadow.camera.bottom = -10;
 dirLight.castShadow = true;
 
-scene.add(worldAxes, dirLight, pfHelper);
+scene.add(/* worldAxes, */ dirLight, pfHelper);
 
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.render(scene, mainCam);
@@ -80,7 +80,6 @@ function togglePFDebugger(b)
 //#region --------------Rapier Physics Setup---------------------
 const gravity = { x: 0, y: -9.81, z: 0 };
 const physWorld = new RAPIER.World(gravity);
-const yellow = new THREE.MeshLambertMaterial({ color: 0xfcd303 });
 
 // let platformCollider = RAPIER.ColliderDesc.cuboid(7.5, 0.5, 7.5);
 // physWorld.createCollider(platformCollider);
@@ -138,7 +137,7 @@ function createMesh(meshes)
     return mergedMesh;
 }
 
-gltfLoader.load("./Assets/Maps/testMap_1.glb", (gltf) =>
+gltfLoader.load("./Assets/Maps/testMap_2.glb", (gltf) =>
 {
     let _mesh = createMesh(gltf.scene.children[0].children);
     let vertices = _mesh.geometry.attributes.position.array;
@@ -152,7 +151,7 @@ gltfLoader.load("./Assets/Maps/testMap_1.glb", (gltf) =>
 //#region ----------------Navmesh Generation---------------------
 // https://navmesh.isaacmason.com/
 let navmesh; let groupID; let navpath; let ZONE = "testScene";
-gltfLoader.load("./Assets/NavMeshes/navMesh_testScene_3.gltf", (gltf) =>
+gltfLoader.load("./Assets/Maps/NavMeshes/navMesh_testMap_2.gltf", (gltf) =>
 {
     gltf.scene.traverse((node) =>
     {
@@ -191,6 +190,19 @@ function findIntersect(pos)
     return raycaster.intersectObjects(scene.children);
 }
 
+function adjustNodePosition(node, objects, threshold)
+{
+    objects.forEach(object =>
+    {
+        let distance = node.distanceTo(object.position);
+        if(distance < threshold)
+        {
+            let dir = node.clone().sub(object.position).normalize();
+            node.add(directionToColor.mutliplayScalar(distance));
+        }
+    });
+}
+
 window.addEventListener('click', (e) =>
 {
     pointer.x = (e.clientX / renderer.domElement.width) * 2 - 1;
@@ -215,10 +227,17 @@ window.addEventListener('click', (e) =>
             pfHelper.setPath(navpath);
         }
         
+        // Adjust node positions based on proximity to nearby objects
+        let nearbyObjects = scene.children.filter(obj => obj.isMesh); // Example filter for nearby objects
+        let threshold = 1.0; // Example threshold distance
+        navpath.forEach((node) => adjustNodePosition(node, nearbyObjects, threshold));
+
         // player._navpath = navpath;
         player.navpath = navpath;
+        
+        // navpath.forEach((n) => { console.log(n); });
     }
-})
+});
 //#endregion
 
 //#region -------------------Update Loop-------------------------

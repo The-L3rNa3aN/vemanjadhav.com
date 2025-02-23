@@ -35,7 +35,7 @@ export default class Player
         const colliderDesc = RAPIER.ColliderDesc.capsule(0.5, 0.5);
         physWorld.createCollider(colliderDesc, this.rigidBody);
 
-        this.mesh.add(new THREE.AxesHelper(2));
+        // this.mesh.add(new THREE.AxesHelper(2));
         scene.add(this.mesh, this.sightingVector);
     }
 
