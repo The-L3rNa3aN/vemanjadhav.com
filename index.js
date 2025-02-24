@@ -170,6 +170,7 @@ const player = new Player(physWorld, scene, { x: 6, y: 1.5, z: 6 });
 const rapierDebugRenderer = new RapierDebugRenderer(scene, physWorld);
 const fpsSliderParams = { fps: fpsCap };
 const pfToggleDebug = { test: true };
+const togglePlayerVisibility = () => { player.mesh.visible = !player.mesh.visible; };
 
 const gui = new GUI();
 gui.add(rapierDebugRenderer, 'enabled').name("Rapier Debug Renderer");
@@ -181,6 +182,7 @@ gui.add(player, 'nodeSpeed', 0, 150).name("Player node speed").onChange((value) 
 gui.add(player, 'svLerpSpeed', 1, 10).name("Player rotating speed").onChange((value) => { player.svLerpSpeed = value; });
 gui.add(fpsSliderParams, 'fps', 25, 160).name("FPS Cap").onChange((value) => { fpsCap = value; });
 gui.add({ clickMe: download }, 'clickMe').name("Download scene as GLB");
+gui.add({ clickMe: togglePlayerVisibility }, 'clickMe').name("Toggle player visibility");
 //#endregion
 
 //#region ------------------Pointer Stuff------------------------
@@ -194,14 +196,35 @@ function adjustNodePosition(node, objects, threshold)
 {
     objects.forEach(object =>
     {
+        // Adjusting the node's lateral positions to prevent the player from colliding with the world geometry.
         let distance = node.distanceTo(object.position);
         if(distance < threshold)
         {
+            let diff = threshold - distance;
             let dir = node.clone().sub(object.position).normalize();
-            node.add(directionToColor.mutliplayScalar(distance));
+            let dir2 = new THREE.Vector3(dir.x * diff, dir.y, dir.z * diff);
+            node.add(dir2);
         }
     });
 }
+
+function returnResolvedNode(nodes)
+{
+    let xsum = 0, zsum = 0;
+
+    xsum = nodes.reduce((total, current) => total + current.x, 0);
+    zsum = nodes.reduce((total, current) => total + current.z, 0);
+
+    xsum /= nodes.length;
+    zsum /= nodes.length;
+    
+    return new THREE.Vector3(xsum, nodes[0].y, zsum);
+}
+
+let tempPfHelper = new PathfindingHelper();
+tempPfHelper._pathLineMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00 });
+// console.log(tempPfHelper._pathLineMaterial);
+scene.add(tempPfHelper);
 
 window.addEventListener('click', (e) =>
 {
@@ -218,6 +241,32 @@ window.addEventListener('click', (e) =>
         let closest = pf.getClosestNode(playerPos, ZONE, groupID);
         navpath = pf.findPath(closest.centroid, point, ZONE, groupID);
 
+        // Temporary PF Helper for visualizing the original drawn navpath before manually adjusting.
+        if(navpath && isPfDebuggerEnabled)
+        {
+            tempPfHelper.reset();
+            tempPfHelper.setPlayerPosition(playerPos);
+            tempPfHelper.setTargetPosition(point);
+            tempPfHelper.setPath(navpath);
+        }
+
+        // Adjust node positions based on proximity to nearby objects
+        let nearbyObjects = scene.children.filter(obj => obj.isMesh);
+        let threshold = 5;
+        navpath.forEach((node) => adjustNodePosition(node, nearbyObjects, threshold));
+
+        /* for (let i = 0; i < navpath.length; i++)
+        {
+            if(i === navpath.length - 1) break;
+
+            let diff = navpath[i].clone().sub(navpath[i + 1]);
+            if(diff.length() < 0.5)
+            {
+                let nodes = navpath.splice(i, 2);
+                navpath.splice(i - 1, 0, returnResolvedNode(nodes));
+            }
+        } */
+
         // Visualize the path.
         if(navpath)
         {
@@ -227,15 +276,16 @@ window.addEventListener('click', (e) =>
             pfHelper.setPath(navpath);
         }
         
-        // Adjust node positions based on proximity to nearby objects
-        let nearbyObjects = scene.children.filter(obj => obj.isMesh); // Example filter for nearby objects
-        let threshold = 1.0; // Example threshold distance
-        navpath.forEach((node) => adjustNodePosition(node, nearbyObjects, threshold));
+        /* console.log("LENGTH: ", navpath.length);
+        for (let i = 0; i < navpath.length; i++)
+        {
+            if(i === navpath.length - 1) break;
 
-        // player._navpath = navpath;
-        player.navpath = navpath;
+            let diff = navpath[i].clone().sub(navpath[i + 1]);
+            console.log("COUNT: ", (i + 1), "| DIFF: ", diff.length());
+        } */
         
-        // navpath.forEach((n) => { console.log(n); });
+        player.navpath = navpath;
     }
 });
 //#endregion
