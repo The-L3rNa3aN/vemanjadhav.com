@@ -28,7 +28,6 @@ var isPfDebuggerEnabled = true;
 const controls = new OrbitControls(mainCam, renderer.domElement);
 
 mainCam.position.set(10, 20, 10);
-// mainCam.position.set(0, 20, 0);
 mainCam.lookAt(0, 0, 0);
 
 renderer.shadowMap.enabled = true;
@@ -202,7 +201,24 @@ function adjustNodePosition(node, objects, threshold)
         {
             let diff = threshold - distance;
             let dir = node.clone().sub(object.position).normalize();
-            let dir2 = new THREE.Vector3(dir.x * diff, dir.y, dir.z * diff);
+
+            if(!isLastNode)                 // Omitting the last node from vertical adjustment.
+            {
+                //Vertical adjustment, keeping an equal distance for all nodes from the ground.
+                let r = new THREE.Raycaster(node, new THREE.Vector3(0, -1, 0));
+                let i = r.intersectObjects(scene.children);
+    
+                i.forEach((e) =>
+                {
+                    if(e.object.isMesh)
+                    {
+                        node.y = e.point.y;
+                        node.y += 0.25;
+                    }
+                });
+            }
+
+            let dir2 = new THREE.Vector3(dir.x * diff, isLastNode ? dir.y : node.y, dir.z * diff);
             node.add(dir2);
         }
     });
@@ -221,10 +237,9 @@ function returnResolvedNode(nodes)
     return new THREE.Vector3(xsum, nodes[0].y, zsum);
 }
 
-let tempPfHelper = new PathfindingHelper();
+/* let tempPfHelper = new PathfindingHelper();
 tempPfHelper._pathLineMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00 });
-// console.log(tempPfHelper._pathLineMaterial);
-scene.add(tempPfHelper);
+scene.add(tempPfHelper); */
 
 window.addEventListener('click', (e) =>
 {
@@ -242,19 +257,27 @@ window.addEventListener('click', (e) =>
         navpath = pf.findPath(closest.centroid, point, ZONE, groupID);
 
         // Temporary PF Helper for visualizing the original drawn navpath before manually adjusting.
-        if(navpath && isPfDebuggerEnabled)
+        /* if(navpath && isPfDebuggerEnabled)
         {
             tempPfHelper.reset();
             tempPfHelper.setPlayerPosition(playerPos);
             tempPfHelper.setTargetPosition(point);
             tempPfHelper.setPath(navpath);
-        }
+        } */
 
         // Adjust node positions based on proximity to nearby objects
         let nearbyObjects = scene.children.filter(obj => obj.isMesh);
         let threshold = 5;
-        navpath.forEach((node) => adjustNodePosition(node, nearbyObjects, threshold));
+        let count = 1;
+        navpath.forEach((node) =>
+        {
+            // console.log("Node number: ", count);
+            let b = count === navpath.length;
+            adjustNodePosition(node, nearbyObjects, threshold, b);
+            count++;
+        });
 
+        // Resolving nodes which are too close to each other by making them one.
         /* for (let i = 0; i < navpath.length; i++)
         {
             if(i === navpath.length - 1) break;
@@ -263,27 +286,18 @@ window.addEventListener('click', (e) =>
             if(diff.length() < 0.5)
             {
                 let nodes = navpath.splice(i, 2);
-                navpath.splice(i - 1, 0, returnResolvedNode(nodes));
+                navpath.splice(i, 0, returnResolvedNode(nodes));
             }
         } */
 
         // Visualize the path.
-        if(navpath)
+        if(navpath && isPfDebuggerEnabled)
         {
             pfHelper.reset();
             pfHelper.setPlayerPosition(playerPos);
             pfHelper.setTargetPosition(point);
             pfHelper.setPath(navpath);
         }
-        
-        /* console.log("LENGTH: ", navpath.length);
-        for (let i = 0; i < navpath.length; i++)
-        {
-            if(i === navpath.length - 1) break;
-
-            let diff = navpath[i].clone().sub(navpath[i + 1]);
-            console.log("COUNT: ", (i + 1), "| DIFF: ", diff.length());
-        } */
         
         player.navpath = navpath;
     }
