@@ -191,7 +191,7 @@ function findIntersect(pos)
     return raycaster.intersectObjects(scene.children);
 }
 
-function adjustNodePosition(node, objects, threshold)
+function adjustNodePosition(node, objects, threshold, isLastNode)
 {
     objects.forEach(object =>
     {
