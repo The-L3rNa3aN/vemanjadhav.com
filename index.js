@@ -25,6 +25,7 @@ const stats = new Stats();
 var fpsCap = 60;
 const clock = new THREE.Clock();
 var isPfDebuggerEnabled = true;
+var resolveNodesEnabled = false;
 const controls = new OrbitControls(mainCam, renderer.domElement);
 
 mainCam.position.set(10, 20, 10);
@@ -169,6 +170,7 @@ const player = new Player(physWorld, scene, { x: 6, y: 1.5, z: 6 });
 const rapierDebugRenderer = new RapierDebugRenderer(scene, physWorld);
 const fpsSliderParams = { fps: fpsCap };
 const pfToggleDebug = { test: true };
+const resolveNodesToggleDebug = { test: resolveNodesEnabled };
 const togglePlayerVisibility = () => { player.mesh.visible = !player.mesh.visible; };
 
 const gui = new GUI();
@@ -176,6 +178,7 @@ gui.add(rapierDebugRenderer, 'enabled').name("Rapier Debug Renderer");
 gui.add(worldAxes, 'visible').name("Axes Helper");
 gui.add(pfToggleDebug, 'test').name("Visualize Navpath").onChange((value) => togglePFDebugger(value));
 gui.add(controls, 'enabled').name("Enable Orbit Controls");
+gui.add(resolveNodesToggleDebug, 'test').name("Enable Resolving Nodes").onChange((value) => { resolveNodesEnabled = value; });
 gui.add(player, 'speed', 0, 1000).name("Player speed").onChange((value) => { player.speed = value; });
 gui.add(player, 'nodeSpeed', 0, 150).name("Player node speed").onChange((value) => { player.nodeSpeed = value; });
 gui.add(player, 'svLerpSpeed', 1, 10).name("Player rotating speed").onChange((value) => { player.svLerpSpeed = value; });
@@ -189,6 +192,24 @@ function findIntersect(pos)
 {
     raycaster.setFromCamera(pos, mainCam);
     return raycaster.intersectObjects(scene.children);
+}
+
+function recalculateNodeYPosition(node)
+{
+    let r = new THREE.Raycaster(node, new THREE.Vector3(0, -1, 0));
+    let i = r.intersectObjects(scene.children);
+
+    i.forEach((e) =>
+    {
+        if(e.object.isMesh)
+        {
+            console.log(e.point.y);
+            node.y = e.point.y;
+            node.y += 0.25;
+        }
+    });
+
+    return node.y;
 }
 
 function adjustNodePosition(node, objects, threshold, isLastNode)
@@ -205,7 +226,7 @@ function adjustNodePosition(node, objects, threshold, isLastNode)
             if(!isLastNode)                 // Omitting the last node from vertical adjustment.
             {
                 //Vertical adjustment, keeping an equal distance for all nodes from the ground.
-                let r = new THREE.Raycaster(node, new THREE.Vector3(0, -1, 0));
+                /* let r = new THREE.Raycaster(node, new THREE.Vector3(0, -1, 0));
                 let i = r.intersectObjects(scene.children);
     
                 i.forEach((e) =>
@@ -215,7 +236,9 @@ function adjustNodePosition(node, objects, threshold, isLastNode)
                         node.y = e.point.y;
                         node.y += 0.25;
                     }
-                });
+                }); */
+
+                node.y = recalculateNodeYPosition(node);
             }
 
             let dir2 = new THREE.Vector3(dir.x * diff, isLastNode ? dir.y : node.y, dir.z * diff);
@@ -235,6 +258,69 @@ function returnResolvedNode(nodes)
     zsum /= nodes.length;
     
     return new THREE.Vector3(xsum, nodes[0].y, zsum);
+}
+
+function interpBetween(start, end, numPoints, skipStartingPoint)
+{
+    const points = [];
+    // const inBetween = end.clone().sub(start);
+    // console.log(inBetween);
+
+    for(let j = 0; j <= numPoints; j++)
+    {
+        const t = j / numPoints;
+        const x = start.x + (end.x - start.x) * t;
+        // const y = recalculateNodeYPosition(end.clone().sub(start));
+        const y = 10;
+        const z = start.z + (end.z - start.z) * t;
+        points.push(new THREE.Vector3(x, start.y, z));
+
+        /* if(j === 0 && skipStartingPoint)
+            points.push(new THREE.Vector3(x, start.y, z));
+        else
+            points.push(new THREE.Vector3(x, y, z)); */
+    }
+
+    return points;
+}
+
+function interpolatedPath(path)
+{
+    console.log(path);
+    let newPath = [];
+
+    /* for(let i = 0; i < path.length; i++)
+    {
+        const start = path[i];
+        const end = path[i + 1];
+        const interpPath = interpBetween(start, end, 2);
+        newPath.push(interpPath);
+    }
+
+    newPath.pop(); */
+
+    if(path.length === 1)
+    {
+        // newPath.push(interpBetween(player.mesh.position, path[0], 2));
+        newPath = interpBetween(player.mesh.position, path[0], 8, true);
+    }
+    else
+    {
+        for(let i = 0; i < path.length; i++)
+        {
+            // if(!path[i + 1]) return;
+
+            const start = path[i];
+            const end = path[i + 1];
+            const interpPath = interpBetween(start, end, 2, false);
+            interpPath.forEach((e) => newPath.push(e));
+            console.log("ITERATION:", i, "| PATH LENGTH:", path.length, "| NEW PATH: ", newPath);
+        }
+    }
+
+    newPath[newPath.length - 1].y = path[path.length - 1].y;
+
+    return newPath;
 }
 
 /* let tempPfHelper = new PathfindingHelper();
@@ -265,9 +351,11 @@ window.addEventListener('click', (e) =>
             tempPfHelper.setPath(navpath);
         } */
 
+        navpath = interpolatedPath(navpath);
+
         // Adjust node positions based on proximity to nearby objects
         let nearbyObjects = scene.children.filter(obj => obj.isMesh);
-        let threshold = 5;
+        let threshold = 5.5;
         let count = 1;
         navpath.forEach((node) =>
         {
@@ -278,17 +366,24 @@ window.addEventListener('click', (e) =>
         });
 
         // Resolving nodes which are too close to each other by making them one.
-        /* for (let i = 0; i < navpath.length; i++)
+        if(resolveNodesEnabled)
         {
-            if(i === navpath.length - 1) break;
-
-            let diff = navpath[i].clone().sub(navpath[i + 1]);
-            if(diff.length() < 0.5)
+            for (let i = 0; i < navpath.length; i++)
             {
-                let nodes = navpath.splice(i, 2);
-                navpath.splice(i, 0, returnResolvedNode(nodes));
+                if(i === navpath.length - 1) break;
+    
+                let diff = navpath[i].clone().sub(navpath[i + 1]);
+                if(diff.length() < 0.5)
+                {
+                    let nodes = navpath.splice(i, 2);
+                    navpath.splice(i, 0, returnResolvedNode(nodes));
+                }
             }
-        } */
+        }
+
+        // console.log("OLD NAVPATH: ", navpath);
+        // navpath = interpolatedPath(navpath);
+        // console.log("NEW NAVPATH: ", navpath);
 
         // Visualize the path.
         if(navpath && isPfDebuggerEnabled)
