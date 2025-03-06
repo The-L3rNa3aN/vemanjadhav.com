@@ -26,6 +26,7 @@ var fpsCap = 60;
 const clock = new THREE.Clock();
 var isPfDebuggerEnabled = true;
 var resolveNodesEnabled = false;
+var interpNodesEnabled = true;
 const controls = new OrbitControls(mainCam, renderer.domElement);
 
 mainCam.position.set(10, 20, 10);
@@ -171,6 +172,7 @@ const rapierDebugRenderer = new RapierDebugRenderer(scene, physWorld);
 const fpsSliderParams = { fps: fpsCap };
 const pfToggleDebug = { test: true };
 const resolveNodesToggleDebug = { test: resolveNodesEnabled };
+const interpNodesToggleDebug = { test: interpNodesEnabled };
 const togglePlayerVisibility = () => { player.mesh.visible = !player.mesh.visible; };
 
 const gui = new GUI();
@@ -179,6 +181,7 @@ gui.add(worldAxes, 'visible').name("Axes Helper");
 gui.add(pfToggleDebug, 'test').name("Visualize Navpath").onChange((value) => togglePFDebugger(value));
 gui.add(controls, 'enabled').name("Enable Orbit Controls");
 gui.add(resolveNodesToggleDebug, 'test').name("Enable Resolving Nodes").onChange((value) => { resolveNodesEnabled = value; });
+gui.add(interpNodesToggleDebug, 'test').name("Enable Node Interpolation").onChange((value) => { interpNodesEnabled = value; });
 gui.add(player, 'speed', 0, 1000).name("Player speed").onChange((value) => { player.speed = value; });
 gui.add(player, 'nodeSpeed', 0, 150).name("Player node speed").onChange((value) => { player.nodeSpeed = value; });
 gui.add(player, 'svLerpSpeed', 1, 10).name("Player rotating speed").onChange((value) => { player.svLerpSpeed = value; });
@@ -198,8 +201,9 @@ function recalculateNodeYPosition(node)
 {
     let r = new THREE.Raycaster(node, new THREE.Vector3(0, -1, 0));
     let i = r.intersectObjects(scene.children);
+    let y = node.y;
 
-    i.forEach((e) =>
+    /* i.forEach((e) =>
     {
         if(e.object.isMesh)
         {
@@ -209,7 +213,13 @@ function recalculateNodeYPosition(node)
         }
     });
 
-    return node.y;
+    return node.y; */
+
+    i.forEach((e) => { if(y < e.point.y) y = e.point.y });
+
+    y += 0.25;
+
+    return y;
 }
 
 function adjustNodePosition(node, objects, threshold, isLastNode)
@@ -223,23 +233,9 @@ function adjustNodePosition(node, objects, threshold, isLastNode)
             let diff = threshold - distance;
             let dir = node.clone().sub(object.position).normalize();
 
+            // Vertical adjustment, keeping an equal distance for all nodes from the ground.
             if(!isLastNode)                 // Omitting the last node from vertical adjustment.
-            {
-                //Vertical adjustment, keeping an equal distance for all nodes from the ground.
-                /* let r = new THREE.Raycaster(node, new THREE.Vector3(0, -1, 0));
-                let i = r.intersectObjects(scene.children);
-    
-                i.forEach((e) =>
-                {
-                    if(e.object.isMesh)
-                    {
-                        node.y = e.point.y;
-                        node.y += 0.25;
-                    }
-                }); */
-
                 node.y = recalculateNodeYPosition(node);
-            }
 
             let dir2 = new THREE.Vector3(dir.x * diff, isLastNode ? dir.y : node.y, dir.z * diff);
             node.add(dir2);
@@ -260,25 +256,20 @@ function returnResolvedNode(nodes)
     return new THREE.Vector3(xsum, nodes[0].y, zsum);
 }
 
-function interpBetween(start, end, numPoints, skipStartingPoint)
+function interpBetween(start, end, numPoints, isStartingPoint)
 {
     const points = [];
-    // const inBetween = end.clone().sub(start);
-    // console.log(inBetween);
+    console.log(isStartingPoint);
 
     for(let j = 0; j <= numPoints; j++)
     {
-        const t = j / numPoints;
-        const x = start.x + (end.x - start.x) * t;
-        // const y = recalculateNodeYPosition(end.clone().sub(start));
-        const y = 10;
-        const z = start.z + (end.z - start.z) * t;
+        let t = j / numPoints;
+        let x = start.x + (end.x - start.x) * t;
+        // let y = isStartingPoint ? start.y : 10;
+        // let y = isStartingPoint ? 10 : start.y;
+        let y = 10;
+        let z = start.z + (end.z - start.z) * t;
         points.push(new THREE.Vector3(x, start.y, z));
-
-        /* if(j === 0 && skipStartingPoint)
-            points.push(new THREE.Vector3(x, start.y, z));
-        else
-            points.push(new THREE.Vector3(x, y, z)); */
     }
 
     return points;
@@ -286,39 +277,41 @@ function interpBetween(start, end, numPoints, skipStartingPoint)
 
 function interpolatedPath(path)
 {
-    console.log(path);
     let newPath = [];
 
-    /* for(let i = 0; i < path.length; i++)
-    {
-        const start = path[i];
-        const end = path[i + 1];
-        const interpPath = interpBetween(start, end, 2);
-        newPath.push(interpPath);
-    }
-
-    newPath.pop(); */
-
-    if(path.length === 1)
+    /* if(path.length === 1)
     {
         // newPath.push(interpBetween(player.mesh.position, path[0], 2));
         newPath = interpBetween(player.mesh.position, path[0], 8, true);
     }
     else
     {
-        for(let i = 0; i < path.length; i++)
+        for(let i = 0; i < path.length - 1; i++)
         {
-            // if(!path[i + 1]) return;
-
-            const start = path[i];
-            const end = path[i + 1];
-            const interpPath = interpBetween(start, end, 2, false);
+            let start = path[i];
+            let end = path[i + 1];
+            // let b = i === 0;
+            let interpPath = interpBetween(start, end, 2, false);
             interpPath.forEach((e) => newPath.push(e));
             console.log("ITERATION:", i, "| PATH LENGTH:", path.length, "| NEW PATH: ", newPath);
         }
+    } */
+
+    let test = path.length === 1;
+    if(path.length === 1) path = [player.mesh.position, path[0]];
+
+    for(let i = 0; i < path.length - 1; i++)
+    {
+        let start = path[i];
+        let end = path[i + 1];
+        let b = i === 0;
+        let interpPath = interpBetween(start, end, test ? 8 : 2, b);
+        interpPath.forEach((e) => newPath.push(e));
     }
 
-    newPath[newPath.length - 1].y = path[path.length - 1].y;
+    // The Y value of the new path's last node is set to the same of the old path for ensuring the player stopping.
+    newPath[newPath.length - 1].y = path[path.length - 1].y;        // Disabling this results in the last node not being aligend to the ground on the first time. Needs a fix?
+    // newPath[0].y = path[0].y;
 
     return newPath;
 }
@@ -351,7 +344,9 @@ window.addEventListener('click', (e) =>
             tempPfHelper.setPath(navpath);
         } */
 
-        navpath = interpolatedPath(navpath);
+        console.log("OLD NAVPATH: ", navpath);
+        if(interpNodesEnabled) navpath = interpolatedPath(navpath);
+        console.log("NEW NAVPATH: ", navpath);
 
         // Adjust node positions based on proximity to nearby objects
         let nearbyObjects = scene.children.filter(obj => obj.isMesh);
@@ -380,10 +375,6 @@ window.addEventListener('click', (e) =>
                 }
             }
         }
-
-        // console.log("OLD NAVPATH: ", navpath);
-        // navpath = interpolatedPath(navpath);
-        // console.log("NEW NAVPATH: ", navpath);
 
         // Visualize the path.
         if(navpath && isPfDebuggerEnabled)
