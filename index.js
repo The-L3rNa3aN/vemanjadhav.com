@@ -145,6 +145,7 @@ gltfLoader.load("./Assets/Maps/testMap_2.glb", (gltf) =>
     let indices = _mesh.geometry.index.array;
     let meshCollider = RAPIER.ColliderDesc.trimesh(vertices, indices);
     physWorld.createCollider(meshCollider);
+    _mesg.tag = "";
     scene.add(_mesh);
 });
 //#endregion
@@ -201,7 +202,7 @@ function recalculateNodeYPosition(node)
 {
     let r = new THREE.Raycaster(node, new THREE.Vector3(0, -1, 0));
     let i = r.intersectObjects(scene.children);
-    let y = node.y;
+    let y = i[0].point.y;
 
     /* i.forEach((e) =>
     {
@@ -215,15 +216,17 @@ function recalculateNodeYPosition(node)
 
     return node.y; */
 
-    i.forEach((e) => { if(y < e.point.y) y = e.point.y });
+    i.forEach((e) => { if(e.point.y >= y) y = e.point.y });
 
-    y += 0.25;
+    // y += 0.25;
+    y += 1;
 
     return y;
 }
 
 function adjustNodePosition(node, objects, threshold, isLastNode)
 {
+    // This code block only works when you're not filtering out scene children with the "Ignore Raycast" tag.
     objects.forEach(object =>
     {
         // Adjusting the node's lateral positions to prevent the player from colliding with the world geometry.
@@ -232,15 +235,47 @@ function adjustNodePosition(node, objects, threshold, isLastNode)
         {
             let diff = threshold - distance;
             let dir = node.clone().sub(object.position).normalize();
-
-            // Vertical adjustment, keeping an equal distance for all nodes from the ground.
-            if(!isLastNode)                 // Omitting the last node from vertical adjustment.
-                node.y = recalculateNodeYPosition(node);
-
             let dir2 = new THREE.Vector3(dir.x * diff, isLastNode ? dir.y : node.y, dir.z * diff);
             node.add(dir2);
         }
+        
+        // Vertical adjustment, keeping an equal distance for all nodes from the ground.
+        if(!isLastNode)                 // Omitting the last node from vertical adjustment.
+            node.y = recalculateNodeYPosition(node);
     });
+
+    // Tried having it done using a "Physics.CheckSphere" like thing with the help of tags and yeah, it didn't work out. Still keeping this code here just in case.
+    /* let icosphere = new THREE.IcosahedronGeometry(threshold, 2);
+    let vertices = [];
+
+    for(let i = 0; i < icosphere.attributes.position.count; i++) vertices.push(new THREE.Vector3().fromBufferAttribute(icosphere.attributes.position, i));
+
+    // let directions = vertices.filter(vertex => Math.abs(vertex.y) < 0.1).map(vertex => { return vertex.clone().normalize() });
+    let directions = vertices.map(vertex => { return vertex.clone().normalize() });
+    let r = new THREE.Raycaster();
+
+    for(let direction of directions)
+    {
+        r.set(node, direction);
+
+        let intersects = r.intersectObjects(objects);
+        console.log(intersects);
+
+        if(intersects.length > 0 && intersects[0].distance < threshold)
+        {
+            // console.log(intersects[0]);
+            node.x = intersects[0].point.x + Math.sign(node.x - intersects[0].point.x) * threshold;
+            node.z = intersects[0].point.z + Math.sign(node.z - intersects[0].point.z) * threshold;
+
+            // let diff = threshold - intersects[0].distance;
+            // let dir = node.clone().sub(intersects[0].point).normalize();
+            // let dir2 = new THREE.Vector3(dir.x * diff, isLastNode ? dir.y : node.y, dir.z * diff);
+            // node.add(dir2);
+        }
+    }
+
+    if(!isLastNode)
+        node.y = recalculateNodeYPosition(node, objects); */
 }
 
 function returnResolvedNode(nodes)
@@ -259,7 +294,7 @@ function returnResolvedNode(nodes)
 function interpBetween(start, end, numPoints, isStartingPoint)
 {
     const points = [];
-    console.log(isStartingPoint);
+    // console.log(isStartingPoint);
 
     for(let j = 0; j <= numPoints; j++)
     {
@@ -279,25 +314,7 @@ function interpolatedPath(path)
 {
     let newPath = [];
 
-    /* if(path.length === 1)
-    {
-        // newPath.push(interpBetween(player.mesh.position, path[0], 2));
-        newPath = interpBetween(player.mesh.position, path[0], 8, true);
-    }
-    else
-    {
-        for(let i = 0; i < path.length - 1; i++)
-        {
-            let start = path[i];
-            let end = path[i + 1];
-            // let b = i === 0;
-            let interpPath = interpBetween(start, end, 2, false);
-            interpPath.forEach((e) => newPath.push(e));
-            console.log("ITERATION:", i, "| PATH LENGTH:", path.length, "| NEW PATH: ", newPath);
-        }
-    } */
-
-    let test = path.length === 1;
+    let ifSingleNode = path.length === 1;
     if(path.length === 1) path = [player.mesh.position, path[0]];
 
     for(let i = 0; i < path.length - 1; i++)
@@ -305,13 +322,13 @@ function interpolatedPath(path)
         let start = path[i];
         let end = path[i + 1];
         let b = i === 0;
-        let interpPath = interpBetween(start, end, test ? 8 : 2, b);
+        // let interpPath = interpBetween(start, end, test ? 8 : 2, b);
+        let interpPath = interpBetween(start, end, 32, b);
         interpPath.forEach((e) => newPath.push(e));
     }
 
     // The Y value of the new path's last node is set to the same of the old path for ensuring the player stopping.
     newPath[newPath.length - 1].y = path[path.length - 1].y;        // Disabling this results in the last node not being aligend to the ground on the first time. Needs a fix?
-    // newPath[0].y = path[0].y;
 
     return newPath;
 }
@@ -344,9 +361,9 @@ window.addEventListener('click', (e) =>
             tempPfHelper.setPath(navpath);
         } */
 
-        console.log("OLD NAVPATH: ", navpath);
+        // console.log("OLD NAVPATH: ", navpath);
         if(interpNodesEnabled) navpath = interpolatedPath(navpath);
-        console.log("NEW NAVPATH: ", navpath);
+        // console.log("NEW NAVPATH: ", navpath);
 
         // Adjust node positions based on proximity to nearby objects
         let nearbyObjects = scene.children.filter(obj => obj.isMesh);
@@ -385,7 +402,7 @@ window.addEventListener('click', (e) =>
             pfHelper.setPath(navpath);
         }
         
-        player.navpath = navpath;
+        // player.navpath = navpath;
     }
 });
 //#endregion
