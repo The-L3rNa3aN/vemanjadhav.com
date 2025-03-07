@@ -23,6 +23,7 @@ export default class Player
         
         this.mesh.castShadow = true;
         this.mesh.receiveShadow = true;
+        this.mesh.tag = "Ignore Raycast";
 
         const rbDesc = RAPIER.RigidBodyDesc.dynamic().setTranslation(x, y, z);
         rbDesc.setCanSleep(false);
