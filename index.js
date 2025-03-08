@@ -145,7 +145,7 @@ gltfLoader.load("./Assets/Maps/testMap_2.glb", (gltf) =>
     let indices = _mesh.geometry.index.array;
     let meshCollider = RAPIER.ColliderDesc.trimesh(vertices, indices);
     physWorld.createCollider(meshCollider);
-    _mesg.tag = "";
+    _mesh.tag = "";
     scene.add(_mesh);
 });
 //#endregion
@@ -322,13 +322,14 @@ function interpolatedPath(path)
         let start = path[i];
         let end = path[i + 1];
         let b = i === 0;
-        // let interpPath = interpBetween(start, end, test ? 8 : 2, b);
-        let interpPath = interpBetween(start, end, 32, b);
+        let interpPath = interpBetween(start, end, ifSingleNode ? 8 : 2, b);
+        // let interpPath = interpBetween(start, end, 32, b);
         interpPath.forEach((e) => newPath.push(e));
     }
 
     // The Y value of the new path's last node is set to the same of the old path for ensuring the player stopping.
     newPath[newPath.length - 1].y = path[path.length - 1].y;        // Disabling this results in the last node not being aligend to the ground on the first time. Needs a fix?
+    // newPath[0].y = path[0].y;
 
     return newPath;
 }
@@ -362,6 +363,8 @@ window.addEventListener('click', (e) =>
         } */
 
         // console.log("OLD NAVPATH: ", navpath);
+        let test = interpBetween(new THREE.Vector3().addVectors(player.mesh.position, navpath[0]).divideScalar(2), navpath[0], 3, true);
+        navpath.unshift(...test);
         if(interpNodesEnabled) navpath = interpolatedPath(navpath);
         // console.log("NEW NAVPATH: ", navpath);
 
@@ -402,7 +405,7 @@ window.addEventListener('click', (e) =>
             pfHelper.setPath(navpath);
         }
         
-        // player.navpath = navpath;
+        player.navpath = navpath;
     }
 });
 //#endregion
