@@ -216,12 +216,14 @@ function recalculateNodeYPosition(node)
 
     return node.y; */
 
-    i.forEach((e) => { if(e.point.y >= y) y = e.point.y });
+    /* i.forEach((e) => { if(e.point.y >= y) y = e.point.y });
 
     // y += 0.25;
     y += 1;
 
-    return y;
+    return y; */
+
+    return i[0].point.y + 1;
 }
 
 function adjustNodePosition(node, objects, threshold, isLastNode)
@@ -240,8 +242,8 @@ function adjustNodePosition(node, objects, threshold, isLastNode)
         }
         
         // Vertical adjustment, keeping an equal distance for all nodes from the ground.
-        if(!isLastNode)                 // Omitting the last node from vertical adjustment.
-            node.y = recalculateNodeYPosition(node);
+        // if(!isLastNode)                 // Omitting the last node from vertical adjustment.
+        //     node.y = recalculateNodeYPosition(node);
     });
 
     // Tried having it done using a "Physics.CheckSphere" like thing with the help of tags and yeah, it didn't work out. Still keeping this code here just in case.
@@ -293,7 +295,7 @@ function returnResolvedNode(nodes)
 
 function interpBetween(start, end, numPoints, isStartingPoint)
 {
-    const points = [];
+    /* const points = [];
     // console.log(isStartingPoint);
 
     for(let j = 0; j <= numPoints; j++)
@@ -306,6 +308,25 @@ function interpBetween(start, end, numPoints, isStartingPoint)
         let z = start.z + (end.z - start.z) * t;
         points.push(new THREE.Vector3(x, start.y, z));
     }
+
+    return points; */
+
+    let direction = new THREE.Vector3();
+    direction.subVectors(end, start);
+
+    let totalDistance = start.distanceTo(end);
+    let stepSize = totalDistance / (numPoints - 1);
+
+    let points = [start];
+
+    for (let i = 1; i < numPoints - 1; i++) {
+        let t = i * stepSize / totalDistance;
+        let point = new THREE.Vector3();
+        point.lerpVectors(start, end, t);
+        points.push(point);
+    }
+
+    points.push(end);
 
     return points;
 }
@@ -323,7 +344,7 @@ function interpolatedPath(path)
         let end = path[i + 1];
         let b = i === 0;
         let interpPath = interpBetween(start, end, ifSingleNode ? 8 : 2, b);
-        // let interpPath = interpBetween(start, end, 32, b);
+        // let interpPath = interpBetween(start, end, 5, b);
         interpPath.forEach((e) => newPath.push(e));
     }
 
@@ -333,10 +354,6 @@ function interpolatedPath(path)
 
     return newPath;
 }
-
-/* let tempPfHelper = new PathfindingHelper();
-tempPfHelper._pathLineMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00 });
-scene.add(tempPfHelper); */
 
 window.addEventListener('click', (e) =>
 {
@@ -353,20 +370,9 @@ window.addEventListener('click', (e) =>
         let closest = pf.getClosestNode(playerPos, ZONE, groupID);
         navpath = pf.findPath(closest.centroid, point, ZONE, groupID);
 
-        // Temporary PF Helper for visualizing the original drawn navpath before manually adjusting.
-        /* if(navpath && isPfDebuggerEnabled)
-        {
-            tempPfHelper.reset();
-            tempPfHelper.setPlayerPosition(playerPos);
-            tempPfHelper.setTargetPosition(point);
-            tempPfHelper.setPath(navpath);
-        } */
-
-        // console.log("OLD NAVPATH: ", navpath);
-        let test = interpBetween(new THREE.Vector3().addVectors(player.mesh.position, navpath[0]).divideScalar(2), navpath[0], 3, true);
-        navpath.unshift(...test);
-        if(interpNodesEnabled) navpath = interpolatedPath(navpath);
-        // console.log("NEW NAVPATH: ", navpath);
+        // let test = interpBetween(new THREE.Vector3().addVectors(player.mesh.position, navpath[0]).divideScalar(2), navpath[0], 3, true);
+        // navpath.unshift(...test);
+        // if(interpNodesEnabled) navpath = interpolatedPath(navpath);
 
         // Adjust node positions based on proximity to nearby objects
         let nearbyObjects = scene.children.filter(obj => obj.isMesh);
@@ -377,8 +383,13 @@ window.addEventListener('click', (e) =>
             // console.log("Node number: ", count);
             let b = count === navpath.length;
             adjustNodePosition(node, nearbyObjects, threshold, b);
+            if(!b) node.y = recalculateNodeYPosition(node);
             count++;
         });
+
+        let dir = new THREE.Vector3().subVectors(navpath[0], player.mesh.position);
+        let firstPoint = new THREE.Vector3().copy(player.mesh.position).addScaledVector(dir, 0.25);
+        navpath.unshift(firstPoint);
 
         // Resolving nodes which are too close to each other by making them one.
         if(resolveNodesEnabled)
@@ -405,7 +416,7 @@ window.addEventListener('click', (e) =>
             pfHelper.setPath(navpath);
         }
         
-        player.navpath = navpath;
+        // player.navpath = navpath;
     }
 });
 //#endregion
