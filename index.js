@@ -201,8 +201,10 @@ function findIntersect(pos)
 function recalculateNodeYPosition(node)
 {
     let r = new THREE.Raycaster(node, new THREE.Vector3(0, -1, 0));
-    let i = r.intersectObjects(scene.children);
+    let i = r.intersectObjects(scene.children).filter(obj => obj.object.isMesh);
     let y = i[0].point.y;
+
+    // console.log("INTERSECTS: ", i);
 
     /* i.forEach((e) =>
     {
@@ -216,14 +218,12 @@ function recalculateNodeYPosition(node)
 
     return node.y; */
 
-    /* i.forEach((e) => { if(e.point.y >= y) y = e.point.y });
+    i.forEach((e) => { if(e.point.y >= y) y = e.point.y });
 
     // y += 0.25;
     y += 1;
 
-    return y; */
-
-    return i[0].point.y + 1;
+    return y;
 }
 
 function adjustNodePosition(node, objects, threshold, isLastNode)
@@ -350,7 +350,6 @@ function interpolatedPath(path)
 
     // The Y value of the new path's last node is set to the same of the old path for ensuring the player stopping.
     newPath[newPath.length - 1].y = path[path.length - 1].y;        // Disabling this results in the last node not being aligend to the ground on the first time. Needs a fix?
-    // newPath[0].y = path[0].y;
 
     return newPath;
 }
@@ -370,9 +369,7 @@ window.addEventListener('click', (e) =>
         let closest = pf.getClosestNode(playerPos, ZONE, groupID);
         navpath = pf.findPath(closest.centroid, point, ZONE, groupID);
 
-        // let test = interpBetween(new THREE.Vector3().addVectors(player.mesh.position, navpath[0]).divideScalar(2), navpath[0], 3, true);
-        // navpath.unshift(...test);
-        // if(interpNodesEnabled) navpath = interpolatedPath(navpath);
+        if(interpNodesEnabled) navpath = interpolatedPath(navpath);
 
         // Adjust node positions based on proximity to nearby objects
         let nearbyObjects = scene.children.filter(obj => obj.isMesh);
@@ -387,9 +384,13 @@ window.addEventListener('click', (e) =>
             count++;
         });
 
+        //Adding a node a little further away from the player's position for convenience's sake, along with adding a "tag" attribute for the first and last nodes.
         let dir = new THREE.Vector3().subVectors(navpath[0], player.mesh.position);
         let firstPoint = new THREE.Vector3().copy(player.mesh.position).addScaledVector(dir, 0.25);
+        firstPoint.y = recalculateNodeYPosition(firstPoint);
+        firstPoint.tag = "FIRST POINT";
         navpath.unshift(firstPoint);
+        navpath[navpath.length - 1].tag = "LAST POINT";
 
         // Resolving nodes which are too close to each other by making them one.
         if(resolveNodesEnabled)
