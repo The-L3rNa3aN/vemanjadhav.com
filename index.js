@@ -138,7 +138,7 @@ function createMesh(meshes)
     return mergedMesh;
 }
 
-gltfLoader.load("./Assets/Maps/testMap_2.glb", (gltf) =>
+gltfLoader.load("./Assets/Maps/testMap_1.glb", (gltf) =>
 {
     let _mesh = createMesh(gltf.scene.children[0].children);
     let vertices = _mesh.geometry.attributes.position.array;
@@ -153,7 +153,7 @@ gltfLoader.load("./Assets/Maps/testMap_2.glb", (gltf) =>
 //#region ----------------Navmesh Generation---------------------
 // https://navmesh.isaacmason.com/
 let navmesh; let groupID; let navpath; let ZONE = "testScene";
-gltfLoader.load("./Assets/Maps/NavMeshes/navMesh_testMap_2.gltf", (gltf) =>
+gltfLoader.load("./Assets/Maps/NavMeshes/navMesh_testMap_1.gltf", (gltf) =>
 {
     gltf.scene.traverse((node) =>
     {
