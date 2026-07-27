@@ -1,11 +1,9 @@
-import RAPIER from "@dimforge/rapier3d";
 import * as THREE from "three";
 
 export class Player
 {
     public mesh: THREE.Mesh;
     speed: number;
-    // public rigidbody: RAPIER.RigidBody;
     keys: Record<string, boolean> = {};
 
     constructor(private physics: any, scene: THREE.Scene, startPos: THREE.Vector3 = new THREE.Vector3(0, 2, 0))
@@ -20,12 +18,10 @@ export class Player
         this.mesh.receiveShadow = true;
         scene.add(this.mesh);
 
-        // let rbDesc = RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(startPos.x, startPos.y, startPos.z);
-        // this.rigidbody = this.world.createRigidBody(rbDesc);
-        // let collDesc = RAPIER.ColliderDesc.capsule(0.5, 0.4);
-        // this.world.createCollider(collDesc, this.rigidbody);
-
         this.physics.addMesh(this.mesh, 1, 0.3);
+        let body = this.mesh.userData.physics?.body;
+
+        body.lockRotations(true, true, true);
 
         //Input listeners (for now)
         window.addEventListener('keydown', (e) => this.keys[e.key.toLowerCase()] = true);
@@ -43,23 +39,21 @@ export class Player
 
         if(moveDir.length() > 0) moveDir.normalize();
 
-        let moveVector = moveDir.multiplyScalar(this.speed * delta);
-        // let currentPos = this.rigidbody.translation();
-        // let targetPos = {x: currentPos.x + moveVector.x, y: currentPos.y, z: currentPos.z};
+        let moveVector = moveDir.multiplyScalar(this.speed);
+        let currentBody = this.mesh.userData.physics?.body;
 
-        // this.rigidbody.setNextKinematicTranslation(targetPos);
+        if(currentBody)
+        {
+            let currentVel = currentBody.linvel();
+            moveVector.y = currentVel.y;
+        }
 
-        // let pos = this.rigidbody.translation();
-        // this.mesh.position.set(pos.x, pos.y, pos.z);
-
-        this.mesh.position.x += moveVector.x;
-        this.physics.setMeshPosition(this.mesh, this.mesh.position, true);
+        this.physics.setMeshVelocity(this.mesh, moveVector);
     }
 
     public dispose(/* world: RAPIER.World */)
     {
         window.removeEventListener('keydown', () => {});
         window.removeEventListener('keyup', () => {});
-        // world.removeRigidBody(this.rigidbody);
     }
 }

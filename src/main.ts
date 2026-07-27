@@ -64,7 +64,6 @@ async function initPhysics()
 	// world = physics.world;
 }
 await initPhysics();
-// await new Promise(resolve => setTimeout(resolve, 1000));
 
 let player = new Player(physics, scene, new THREE.Vector3(0, 2, 0));
 
@@ -82,7 +81,7 @@ function updateLoop(timestamp)
 
 	if(physics)
 	{
-		physics.world.step();
+		// physics.world.step();
 	}
 
 	player.update(delta);
