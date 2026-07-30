@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { RapierPhysics } from 'three/examples/jsm/Addons.js';
 import { Player } from './Player';
 import RAPIER from '@dimforge/rapier3d';
+import { EntityManager } from './EntityManager';
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -65,7 +66,9 @@ async function initPhysics()
 }
 await initPhysics();
 
+let entityManager = new EntityManager();
 let player = new Player(physics, scene, new THREE.Vector3(0, 2, 0));
+entityManager.add(player);
 
 //Adding physics to capsule.
 // physics.addMesh(caps, 1, 0.3);
@@ -84,7 +87,8 @@ function updateLoop(timestamp)
 		// physics.world.step();
 	}
 
-	player.update(delta);
+	// player.update(delta);
+	entityManager.update(delta);
 
 	renderer.render(scene, camera);
 }
