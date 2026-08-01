@@ -26,6 +26,8 @@ export abstract class EntityBase
 
     protected abstract createMesh(): THREE.Mesh;
 
+    protected abstract initStates(): void;
+
     protected changeState(newState: IEntityState): void
     {
         this.currentState?.exit();

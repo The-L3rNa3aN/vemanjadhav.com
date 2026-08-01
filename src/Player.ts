@@ -21,8 +21,7 @@ export class Player extends EntityBase
         this.jumpForce = 5;
         this.input = new Input();
 
-        this.state_alive = new PlayerState_Alive(this);
-        this.state_dead = new PlayerState_Dead(this);
+        this.initStates();
 
         this.currentState = this.state_alive;
         this.currentState.enter();
@@ -33,6 +32,12 @@ export class Player extends EntityBase
         let geometry = new THREE.CapsuleGeometry(0.5, 1, 4, 8);
         let material = new THREE.MeshLambertMaterial({ color: 0x808080 });
         return new THREE.Mesh(geometry, material);
+    }
+
+    protected initStates(): void
+    {
+        this.state_alive = new PlayerState_Alive(this);
+        this.state_dead = new PlayerState_Dead(this);
     }
 
     public update(delta: number)
@@ -63,7 +68,7 @@ export class Player extends EntityBase
             this.isGrounded = false;
         }
 
-        if(this.input.getKillCheatKey()) this.playerDeath();
+        if(this.health <= 0) this.playerDeath();
     }
 
     public updateDuringDeath(delta: number): void           //Temporary function for testing the state pattern.

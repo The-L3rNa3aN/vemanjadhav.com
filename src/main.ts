@@ -1,8 +1,10 @@
 import * as THREE from 'three';
 import { RapierPhysics } from 'three/examples/jsm/Addons.js';
 import { Player } from './Player';
-import RAPIER from '@dimforge/rapier3d';
 import { EntityManager } from './EntityManager';
+import CGameManager from './CGameManager';
+import { Zone } from './Zone';
+import { GameMode } from './Utils';
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -10,7 +12,6 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 const dirLight = new THREE.DirectionalLight(0xffffff, 1);
 const timer = new THREE.Timer();
 let physics: any;
-let world: RAPIER.World;
 
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -35,18 +36,33 @@ const cube = new THREE.Mesh(geometry, material);
 cube.castShadow = true;
 cube.receiveShadow = true;
 
-/* let capsGeo = new THREE.CapsuleGeometry(0.5, 1, 4, 8);
-const capsMat = new THREE.MeshStandardMaterial({ color: 0x808080 });
-let caps = new THREE.Mesh(capsGeo, capsMat);
-caps.castShadow = true;
-caps.receiveShadow = true;
-caps.position.set(0, 2, 0);
-caps.rotation.z = 0.25;	 */		//For the time being. Only for testing.
-
 camera.position.set(0, 1, 5);
 
-// scene.add(cube, caps, dirLight);
 scene.add(cube, dirLight);
+
+//#region Second and Third areas
+let isoMaterial = new THREE.MeshStandardMaterial({ color: 0x0000ff });
+let isoCube = new THREE.Mesh(geometry, isoMaterial);
+isoCube.position.set(5, 0, 0);
+isoCube.castShadow = true;
+isoCube.receiveShadow = true;
+
+let fpsMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+let fpsCube = new THREE.Mesh(geometry, fpsMaterial);
+fpsCube.position.set(-5, 0, 0);
+fpsCube.castShadow = true;
+fpsCube.receiveShadow = true;
+
+scene.add(isoCube, fpsCube);
+//#endregion
+
+let zoneSize = new THREE.Vector3(5, 7.5, 5);
+let zones: Zone[] =
+[
+	new Zone(new THREE.Vector3(-5, 0, 0), zoneSize, GameMode.FPS, scene),
+	new Zone(new THREE.Vector3(0, 0, 0), zoneSize, GameMode.Metroidvania, scene),
+	new Zone(new THREE.Vector3(5, 0, 0), zoneSize, GameMode.Isometric, scene)
+]
 
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.render(scene, camera);
@@ -59,20 +75,19 @@ window.addEventListener('resize', () =>
 	renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-async function initPhysics()
-{
-	physics = await RapierPhysics();
-	// world = physics.world;
-}
+async function initPhysics() { physics = await RapierPhysics(); }
 await initPhysics();
+
+physics.addMesh(cube, 0);
+physics.addMesh(isoCube, 0);
+physics.addMesh(fpsCube, 0);
 
 let entityManager = new EntityManager();
 let player = new Player(physics, scene, new THREE.Vector3(0, 2, 0));
 entityManager.add(player);
 
-//Adding physics to capsule.
-// physics.addMesh(caps, 1, 0.3);
-physics.addMesh(cube, 0);
+let gameManager = new CGameManager();
+gameManager.onModeChange((mode) => { console.log(`Game mode changed to: ${mode}`); });
 
 function updateLoop(timestamp)
 {
@@ -82,13 +97,10 @@ function updateLoop(timestamp)
 
 	const delta = timer.getDelta();
 
-	if(physics)
-	{
-		// physics.world.step();
-	}
-
-	// player.update(delta);
 	entityManager.update(delta);
+
+	let camTarget = new THREE.Vector3(player.mesh.position.x, player.mesh.position.y + 1, player.mesh.position.z + 5);
+	camera.position.lerp(camTarget, 0.05);
 
 	renderer.render(scene, camera);
 }
