@@ -1,12 +1,12 @@
-import { BaseEntity } from "./BaseEntity";
+import { EntityBase } from "./EntityBase";
 
 export class EntityManager
 {
-    private entities: BaseEntity[] = [];
+    private entities: EntityBase[] = [];
 
-    public add(entity: BaseEntity) { this.entities.push(entity); }
+    public add(entity: EntityBase) { this.entities.push(entity); }
 
-    public remove(entity: BaseEntity) { this.entities = this.entities.filter(e => e !== entity); }
+    public remove(entity: EntityBase) { this.entities = this.entities.filter(e => e !== entity); }
 
     public update(delta: number): void
     {

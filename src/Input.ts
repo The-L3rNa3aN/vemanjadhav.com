@@ -58,6 +58,9 @@ export class Input
         return dir;
     }
 
+    public getKillCheatKey(): boolean { return this.isJustPressed('k'); }
+    public getRespawnCheatKey(): boolean { return this.isJustPressed('r'); }
+
     public dispose()
     {
         window.removeEventListener('keydown', this.onKeyDown.bind(this));

@@ -1,10 +1,13 @@
 import * as THREE from "three";
 import RAPIER from "@dimforge/rapier3d";
+import { IEntityState } from "./Utils";
 
-export abstract class BaseEntity
+export abstract class EntityBase
 {
     public mesh: THREE.Mesh;
-    protected body: RAPIER.RigidBody;
+    public currentState: IEntityState;
+    public health: number = 100;
+    public body: RAPIER.RigidBody;
     protected physics: any;
     protected speed: number;
 
@@ -22,6 +25,13 @@ export abstract class BaseEntity
     }
 
     protected abstract createMesh(): THREE.Mesh;
+
+    protected changeState(newState: IEntityState): void
+    {
+        this.currentState?.exit();
+        this.currentState = newState;
+        this.currentState?.enter();
+    }
 
     protected setupPhysics()
     {

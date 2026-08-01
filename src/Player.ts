@@ -1,13 +1,17 @@
 import * as THREE from "three";
 import { Input } from "./Input";
-import { BaseEntity } from "./BaseEntity";
+import { EntityBase } from "./EntityBase";
+import { PlayerState_Alive, PlayerState_Dead } from "./PlayerStates";
 
-export class Player extends BaseEntity
+export class Player extends EntityBase
 {
     private jumpForce: number;
     private input: Input;
     private isGrounded: boolean = true;
     private raycastDistance: number = 1.1;
+
+    state_alive: PlayerState_Alive;
+    state_dead: PlayerState_Dead;
 
     constructor(physics: any, scene: THREE.Scene, startPos: THREE.Vector3 = new THREE.Vector3(0, 2, 0))
     {
@@ -16,6 +20,12 @@ export class Player extends BaseEntity
         this.speed = 5;
         this.jumpForce = 5;
         this.input = new Input();
+
+        this.state_alive = new PlayerState_Alive(this);
+        this.state_dead = new PlayerState_Dead(this);
+
+        this.currentState = this.state_alive;
+        this.currentState.enter();
     }
 
     protected createMesh(): THREE.Mesh
@@ -27,8 +37,12 @@ export class Player extends BaseEntity
 
     public update(delta: number)
     {
-        if(!this.mesh || !this.physics) return;
+        super.update(delta);
+        this.currentState?.update(delta);
+    }
 
+    public playerMovement(delta: number): void
+    {
         this.updateGrounded();
         
         let moveDir = this.input.getMovementDirection();
@@ -48,6 +62,13 @@ export class Player extends BaseEntity
             this.body.applyImpulse({ x: 0, y: this.jumpForce, z: 0 }, true);
             this.isGrounded = false;
         }
+
+        if(this.input.getKillCheatKey()) this.playerDeath();
+    }
+
+    public updateDuringDeath(delta: number): void           //Temporary function for testing the state pattern.
+    {
+        if(this.input.getRespawnCheatKey()) this.playerRespawn();
     }
 
     updateGrounded(): void
@@ -68,6 +89,17 @@ export class Player extends BaseEntity
 
         this.isGrounded = hit !== null;
     }
+
+    public playerDeath(): void { this.changeState(this.state_dead); }
+
+    public playerRespawn(): void
+    {
+        this.health = 100;
+        if(this.body) this.body.wakeUp();
+        this.changeState(this.state_alive);
+    }
+
+    public disableInput(): void { this.input = null; }
 
     public dispose()
     {
