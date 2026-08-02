@@ -2,12 +2,14 @@ import * as THREE from 'three';
 import { RapierPhysics } from 'three/examples/jsm/Addons.js';
 import { Player } from './Player';
 import { EntityManager } from './EntityManager';
-import CGameManager from './CGameManager';
+import { CGameManager } from './CGameManager';
 import { Zone } from './Zone';
 import { GameMode } from './Utils';
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+let camOffset = new THREE.Vector3(0, 1, 5);
+let camTarget = new THREE.Vector3();
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 const dirLight = new THREE.DirectionalLight(0xffffff, 1);
 const timer = new THREE.Timer();
@@ -36,7 +38,7 @@ const cube = new THREE.Mesh(geometry, material);
 cube.castShadow = true;
 cube.receiveShadow = true;
 
-camera.position.set(0, 1, 5);
+camera.position.copy(camOffset);
 
 scene.add(cube, dirLight);
 
@@ -87,7 +89,7 @@ let player = new Player(physics, scene, new THREE.Vector3(0, 2, 0));
 entityManager.add(player);
 
 let gameManager = new CGameManager();
-gameManager.onModeChange((mode) => { console.log(`Game mode changed to: ${mode}`); });
+// gameManager.onModeChange((mode) => { console.log(`Game mode changed to: ${mode}`); });
 
 function updateLoop(timestamp)
 {
@@ -99,8 +101,18 @@ function updateLoop(timestamp)
 
 	entityManager.update(delta);
 
-	let camTarget = new THREE.Vector3(player.mesh.position.x, player.mesh.position.y + 1, player.mesh.position.z + 5);
+	camTarget.copy(player.mesh.position).add(camOffset);
 	camera.position.lerp(camTarget, 0.05);
+
+	for(let zone of zones)
+	{
+		let p = player.mesh.position;
+		if(zone.contains(p))
+		{
+			gameManager.changeMode(zone.mode);
+			break;
+		}
+	}
 
 	renderer.render(scene, camera);
 }
