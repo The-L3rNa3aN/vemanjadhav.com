@@ -1,6 +1,6 @@
 import { EntityBase } from "./EntityBase";
 
-export class EntityManager
+export class CEntityManager
 {
     private entities: EntityBase[] = [];
 

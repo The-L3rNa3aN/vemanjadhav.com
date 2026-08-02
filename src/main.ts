@@ -1,14 +1,15 @@
 import * as THREE from 'three';
 import { RapierPhysics } from 'three/examples/jsm/Addons.js';
 import { Player } from './Player';
-import { EntityManager } from './EntityManager';
+import { CEntityManager } from './CEntityManager';
 import { CGameManager } from './CGameManager';
 import { Zone } from './Zone';
 import { GameMode } from './Utils';
 
+let gameManager = new CGameManager();
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-let camOffset = new THREE.Vector3(0, 1, 5);
+let camera:any = gameManager.gameCamera(gameManager.mode).cam;
+let camOffset = gameManager.gameCamera(gameManager.mode).pos;
 let camTarget = new THREE.Vector3();
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 const dirLight = new THREE.DirectionalLight(0xffffff, 1);
@@ -84,12 +85,15 @@ physics.addMesh(cube, 0);
 physics.addMesh(isoCube, 0);
 physics.addMesh(fpsCube, 0);
 
-let entityManager = new EntityManager();
+let entityManager = new CEntityManager();
 let player = new Player(physics, scene, new THREE.Vector3(0, 2, 0));
 entityManager.add(player);
 
-let gameManager = new CGameManager();
-// gameManager.onModeChange((mode) => { console.log(`Game mode changed to: ${mode}`); });
+gameManager.onModeChange((newMode: GameMode) =>
+{
+	camera = gameManager.gameCamera(newMode).cam;
+	camOffset = gameManager.gameCamera(newMode).pos;
+});
 
 function updateLoop(timestamp)
 {
@@ -101,18 +105,10 @@ function updateLoop(timestamp)
 
 	entityManager.update(delta);
 
-	camTarget.copy(player.mesh.position).add(camOffset);
-	camera.position.lerp(camTarget, 0.05);
+	gameManager.updateZones(player, zones);
 
-	for(let zone of zones)
-	{
-		let p = player.mesh.position;
-		if(zone.contains(p))
-		{
-			gameManager.changeMode(zone.mode);
-			break;
-		}
-	}
+	camTarget.copy(player.body.translation()).add(camOffset);
+	camera.position.lerp(camTarget, 0.05);
 
 	renderer.render(scene, camera);
 }
