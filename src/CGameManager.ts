@@ -15,16 +15,19 @@ export class CGameManager
         {
             name: "Metroidvania",
             pos: new THREE.Vector3(0, 1, 5),
+            rot: new THREE.Quaternion(0, 0, 0, 0),
             cam: CAM_P
         },
         {
             name: "Isometric",
             pos: new THREE.Vector3(0, 1, 5),
+            rot: new THREE.Quaternion(0, 0, 0, 0),
             cam: CAM_O
         },
         {
             name: "FPS",
             pos: new THREE.Vector3(0, 1, 5),
+            rot: new THREE.Quaternion(0, 0, 0, 0),
             cam: CAM_P
         }
     ];
