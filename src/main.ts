@@ -46,27 +46,30 @@ camera.position.copy(camOffset);
 scene.add(cube, dirLight);
 
 //#region Second and Third areas
+let geo2 = new THREE.BoxGeometry(7.5, 1, 7.5);
+
 let isoMaterial = new THREE.MeshStandardMaterial({ color: 0x0000ff });
-let isoCube = new THREE.Mesh(geometry, isoMaterial);
-isoCube.position.set(5, 0, 0);
+let isoCube = new THREE.Mesh(geo2, isoMaterial);
+isoCube.position.set(6.25, 0, 0);
 isoCube.castShadow = true;
 isoCube.receiveShadow = true;
 
 let fpsMaterial = new THREE.MeshStandardMaterial({ color: 0xff0000 });
-let fpsCube = new THREE.Mesh(geometry, fpsMaterial);
-fpsCube.position.set(-5, 0, 0);
+let fpsCube = new THREE.Mesh(geo2, fpsMaterial);
+fpsCube.position.set(-6.25, 0, 0);
 fpsCube.castShadow = true;
 fpsCube.receiveShadow = true;
 
 scene.add(isoCube, fpsCube);
 //#endregion
 
-let zoneSize = new THREE.Vector3(5, 7.5, 5);
+let zoneSize1 = new THREE.Vector3(5, 7.5, 5);
+let zoneSize2 = new THREE.Vector3(7.5, 7.5, 7.5);
 let zones: Zone[] =
 [
-	new Zone(new THREE.Vector3(-5, 0, 0), zoneSize, GameMode.FPS, scene),
-	new Zone(new THREE.Vector3(0, 0, 0), zoneSize, GameMode.Metroidvania, scene),
-	new Zone(new THREE.Vector3(5, 0, 0), zoneSize, GameMode.Isometric, scene)
+	new Zone(new THREE.Vector3(-6.25, 0, 0), zoneSize2, GameMode.FPS, scene),
+	new Zone(new THREE.Vector3(0, 0, 0), zoneSize1, GameMode.Metroidvania, scene),
+	new Zone(new THREE.Vector3(6.25, 0, 0), zoneSize2, GameMode.Isometric, scene)
 ]
 
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -107,10 +110,16 @@ gameManager.onModeChange((newMode: GameMode) =>
 	camera.quaternion.copy(m.rot);
 	
 	if(newMode === GameMode.FPS)
+	{
 		camControls = new PointerLockControls(camera, document.body);
-});
 
-document.addEventListener("click", () => { camControls?.lock() });
+		requestAnimationFrame(() =>
+		{
+			if(document.pointerLockElement !== renderer.domElement)
+				camControls?.lock();
+		})
+	}
+});
 
 function updateLoop(timestamp)
 {

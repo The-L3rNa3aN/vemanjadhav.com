@@ -6,9 +6,34 @@ export class Input
     private _previousKeys: Record<string, boolean> = {};
     private listenersAttached = false;
 
+    private testLayout;
+
     constructor()
     {
         this.attachListeners();
+
+        // fetch("./Layouts/test.json")
+        //     .then(data => { console.log(data) })
+        //     .catch(error => console.error("Error loading JSON: ", error));
+
+        this.test();
+    }
+
+    async test()
+    {
+        try
+        {
+            let response = await fetch(new URL("./Layouts/test.json", import.meta.url));
+
+            if(!response.ok)
+                throw new Error(`HTTP error! Status: ${response.status}`);
+
+            this.testLayout = await response.json();
+        }
+        catch(error)
+        {
+            console.error("Could not fetch local JSON: ", error);
+        }
     }
 
     private attachListeners()
@@ -50,8 +75,8 @@ export class Input
     {
         let dir = new THREE.Vector3();
 
-        if(this.isPressed('a')) dir.x -= 1;
-        if(this.isPressed('d')) dir.x += 1;
+        if(this.isPressed(this.testLayout["LEFT"])) dir.x -= 1;
+        if(this.isPressed(this.testLayout["RIGHT"])) dir.x += 1;
 
         if(dir.length() > 0) dir.normalize();
 
