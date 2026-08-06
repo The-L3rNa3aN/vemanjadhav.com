@@ -1,17 +1,18 @@
 import * as THREE from 'three';
-import { RapierPhysics } from 'three/examples/jsm/Addons.js';
+import { PointerLockControls, RapierPhysics } from 'three/examples/jsm/Addons.js';
 import { Player } from './Player';
 import { CEntityManager } from './CEntityManager';
 import { CGameManager } from './CGameManager';
 import { Zone } from './Zone';
 import { GameMode } from './Utils';
-import GUI from 'three/examples/jsm/libs/lil-gui.module.min.js';
 
 let gameManager = new CGameManager();
 const scene = new THREE.Scene();
 let camera:any = gameManager.gameCamera(gameManager.mode).cam;
 let camOffset = gameManager.gameCamera(gameManager.mode).pos;
 let camTarget = new THREE.Vector3();
+let camSmooth = gameManager.gameCamera(gameManager.mode).smooth;
+let camControls: PointerLockControls | null = null;
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 const dirLight = new THREE.DirectionalLight(0xffffff, 1);
 const timer = new THREE.Timer();
@@ -87,27 +88,29 @@ physics.addMesh(isoCube, 0);
 physics.addMesh(fpsCube, 0);
 
 let entityManager = new CEntityManager();
-let player = new Player(physics, scene, new THREE.Vector3(5, 2, 0));
+let player = new Player(physics, scene, new THREE.Vector3(0, 2, 0));
 entityManager.add(player);
-
-//Temporary debug GUI for finding camera values in "Isometric".
-//TO DO: find how to update the quaternion values.
-let gui = new GUI();
-gui.add(camOffset, 'x').onChange(value => camOffset.x = value);
-gui.add(camOffset, 'y').onChange(value => camOffset.y = value);
-gui.add(camOffset, 'z').onChange(value => camOffset.z = value);
-gui.add(camera.quaternion, 'x').onChange(value => camera.quaternion.x = value);
-gui.add(camera.quaternion, 'y').onChange(value => camera.quaternion.y = value);
-gui.add(camera.quaternion, 'z').onChange(value => camera.quaternion.z = value);
-gui.add(camera.quaternion, 'w').onChange(value => camera.quaternion.w = value);
 
 gameManager.onModeChange((newMode: GameMode) =>
 {
+	if(camControls)
+	{
+		camControls.unlock();
+		camControls.dispose();
+		camControls = null;
+	}
+
 	let m = gameManager.gameCamera(newMode);
 	camera = m.cam;
-	camOffset = m.pos;
+	camOffset = newMode == GameMode.FPS ? player.fpsCamTarget : m.pos;
+	camSmooth = m.smooth;
 	camera.quaternion.copy(m.rot);
+	
+	if(newMode === GameMode.FPS)
+		camControls = new PointerLockControls(camera, document.body);
 });
+
+document.addEventListener("click", () => { camControls?.lock() });
 
 function updateLoop(timestamp)
 {
@@ -122,8 +125,7 @@ function updateLoop(timestamp)
 	gameManager.updateZones(player, zones);
 
 	camTarget.copy(player.body.translation()).add(camOffset);
-	camera.position.lerp(camTarget, 0.05);
-	camera.lookAt(player.mesh.position);			//Temporary line for finding out quaternion values of camera. Delete it later.
+	camera.position.lerp(camTarget, camSmooth);
 
 	renderer.render(scene, camera);
 }

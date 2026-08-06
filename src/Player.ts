@@ -5,6 +5,7 @@ import { PlayerState_Alive, PlayerState_Dead } from "./PlayerStates";
 
 export class Player extends EntityBase
 {
+    public fpsCamTarget: THREE.Vector3;
     private jumpForce: number;
     private input: Input;
     private isGrounded: boolean = true;
@@ -25,6 +26,8 @@ export class Player extends EntityBase
 
         this.currentState = this.state_alive;
         this.currentState.enter();
+
+        this.fpsCamTarget = new THREE.Vector3(0, 0.75, 0);
     }
 
     protected createMesh(): THREE.Mesh
